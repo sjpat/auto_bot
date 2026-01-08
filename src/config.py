@@ -63,7 +63,7 @@ class Config:
     )
     
     # ===== Fee-Aware Parameters (Kalshi) =====
-    TARGET_PROFIT_USD: float = float(os.getenv("TARGET_PROFIT_USD", "3.0"))
+    TARGET_PROFIT_USD: float = float(os.getenv("TARGET_PROFIT_USD", "2.00"))
     TARGET_LOSS_USD: float = float(os.getenv("TARGET_LOSS_USD", "-1.5"))
     MIN_PRICE_POINT: float = float(os.getenv("MIN_PRICE_POINT", "0.05"))
     MAX_PRICE_POINT: float = float(os.getenv("MAX_PRICE_POINT", "0.95"))

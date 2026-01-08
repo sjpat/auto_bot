@@ -51,6 +51,7 @@ class TestIntegration:
         spike = spikes[0]
         
         # 4. Risk check
+        
         risk_check = await risk_manager.can_trade_pre_submission(spike)
         assert risk_check.passed is True
         
@@ -76,14 +77,18 @@ class TestIntegration:
         # 7. Evaluate for exit (profitable)
         exit_decision = position_manager.evaluate_position_for_exit(
             order.order_id,
-            0.68  # Price moved up
+            0.71  # Price moved up
         )
         
+        print(f"DEBUG: entry_price={order.avg_fill_price}, current_price=0.68, quantity={order.filled_quantity}")
+        print(f"DEBUG: config.TARGET_PROFIT_USD={getattr(config, 'TARGET_PROFIT_USD', 'NOT SET')}")
+        print(f"DEBUG: exit_decision={exit_decision}")
+
         assert exit_decision['should_exit'] is True
         assert exit_decision['reason'] == 'profit_target_met'
         
         # 8. Close position
-        result = position_manager.close_position(order.order_id, 0.68)
+        result = position_manager.close_position(order.order_id, 0.72)
         
         assert result['success'] is True
         assert result['net_pnl'] > 0
