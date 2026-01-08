@@ -201,7 +201,7 @@ class TestSlippageMonitor:
         )
         
         assert slippage > 0
-        assert abs(slippage - (-0.0154)) < 0.001
+        assert abs(slippage - (0.0154)) < 0.001
     
     def test_negative_slippage_buy(self):
         """Test negative slippage (bad for buyer)."""
@@ -215,7 +215,7 @@ class TestSlippageMonitor:
         )
         
         assert slippage < 0
-        assert abs(slippage - 0.0308) < 0.001
+        assert abs(slippage - (-0.0308)) < 0.001
     
     def test_slippage_symmetry_sell(self):
         """Test slippage calculation for sells."""
