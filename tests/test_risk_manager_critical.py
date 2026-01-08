@@ -351,7 +351,7 @@ class TestSettlementTracker:
         tracker = SettlementTracker()
         
         # Track settled position (already past settlement time)
-        past = datetime.now() - timedelta(days=1)
+        past = datetime.now() - timedelta(days=5)
         tracker.track_settlement('pos_settled', 200.0, past)
         
         # Also track pending position
