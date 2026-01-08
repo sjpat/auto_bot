@@ -73,7 +73,7 @@ class SpikeDetector:
                     continue
                 
                 # Get current price from market (convert cents to dollars)
-                current_price = market.last_price_cents / 100.0
+                current_price = market.last_price_cents / 10000.0
                 
                 # Calculate change
                 change_pct = (current_price - mean_price) / mean_price
