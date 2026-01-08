@@ -1,0 +1,104 @@
+"""
+Tests for Kalshi API client.
+"""
+
+import pytest
+from unittest.mock import Mock, patch, AsyncMock
+from src.clients.kalshi_client import KalshiClient, Market
+
+
+class TestKalshiClient:
+    """Test Kalshi client functionality."""
+    
+    @pytest.mark.asyncio
+    async def test_client_initialization(self, config):
+        """Test client can be initialized."""
+        client = KalshiClient(config)
+        assert client is not None
+        assert client.HTTP_BASE_URL == "https://api.elections.kalshi.com"
+    
+    @pytest.mark.asyncio
+    async def test_authentication(self, config):
+        """Test authentication flow."""
+        client = KalshiClient(config)
+        
+        # Mock the request
+        with patch.object(client, '_request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = {'balance': 100000}  # $1000 in cents
+            
+            result = await client.authenticate()
+            assert result is True
+    
+    @pytest.mark.asyncio
+    async def test_get_balance(self, config):
+        """Test balance retrieval."""
+        client = KalshiClient(config)
+        
+        with patch.object(client, '_request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = {'balance': 150000}  # $1500
+            
+            balance = await client.get_balance()
+            assert balance == 1500.0
+    
+    @pytest.mark.asyncio
+    async def test_get_markets(self, config):
+        """Test market data retrieval."""
+        client = KalshiClient(config)
+        
+        mock_markets = {
+            'markets': [
+                {
+                    'id': 'MARKET1',
+                    'title': 'Test Market 1',
+                    'status': 'open',
+                    'close_ts': 1234567890,
+                    'liquidity_cents': 50000,
+                    'last_price_cents': 6500,
+                    'best_bid_cents': 6450,
+                    'best_ask_cents': 6550
+                }
+            ]
+        }
+        
+        with patch.object(client, '_request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_markets
+            
+            markets = await client.get_markets(status='open', limit=10)
+            assert len(markets) == 1
+            assert markets[0].market_id == 'MARKET1'
+            assert markets[0].price == 0.65
+    
+    @pytest.mark.asyncio
+    async def test_price_conversion(self, sample_market):
+        """Test cents to dollar conversion."""
+        assert sample_market.price == 0.65
+        assert sample_market.liquidity_usd == 1000.0
+    
+    @pytest.mark.asyncio
+    async def test_create_order(self, config):
+        """Test order creation."""
+        client = KalshiClient(config)
+        
+        mock_order = {
+            'order_id': 'ORDER123',
+            'ticker': 'MARKET1',
+            'action': 'buy',
+            'count': 100,
+            'status': 'filled',
+            'filled_count': 100,
+            'avg_fill_price_cents': 6500
+        }
+        
+        with patch.object(client, '_request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_order
+            
+            order = await client.create_order(
+                market_id='MARKET1',
+                side='buy',
+                quantity=100,
+                price=0.65
+            )
+            
+            assert order.order_id == 'ORDER123'
+            assert order.quantity == 100
+            assert order.avg_fill_price == 0.65
