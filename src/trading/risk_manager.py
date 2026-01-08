@@ -374,8 +374,9 @@ class SettlementTracker:
         
         self.settled_positions[position_id] = exit_amount
         
-        if settlement_time > datetime.now():
-            self.pending_settlements[position_id] = settlement_time
+        # if settlement_time > datetime.now():
+        #     self.pending_settlements[position_id] = settlement_time
+        self.pending_settlements[position_id] = settlement_time
         
         self.logger.info(
             f"Settlement tracked: ${exit_amount:.2f} from {position_id} "
