@@ -23,7 +23,16 @@ class TestOrderExecutor:
     async def test_submit_order_success(self, config, sample_order):
         """Test successful order submission."""
         mock_client = Mock()
-        mock_client.create_order = AsyncMock(return_value=sample_order)
+        mock_client.create_order = AsyncMock(return_value={
+            'order_id': 'test_order_001',
+            'market_id': 'TESTMARKET-001',
+            'side': 'buy',
+            'quantity': 100,
+            'price_cents': 6500,
+            'status': 'filled',
+            'filled_quantity': 100,
+            'avg_fill_price_cents': 6500
+        })
         
         executor = OrderExecutor(client=mock_client, config=config)
         
@@ -36,8 +45,8 @@ class TestOrderExecutor:
         )
         
         assert order is not None
-        assert order.order_id == 'test_order_001'
-        assert order.quantity == 100
+        assert order['order_id'] == 'test_order_001'
+        assert order['order']['quantity'] == 100
     
     @pytest.mark.asyncio
     async def test_submit_order_with_retry(self, config):
@@ -45,7 +54,10 @@ class TestOrderExecutor:
         mock_client = Mock()
         # Fail first time, succeed second time
         mock_client.create_order = AsyncMock(
-            side_effect=[Exception("API Error"), sample_order]
+            side_effect=[Exception("API Error"), {
+                'order_id': 'test_order_001',
+                'quantity': 100
+            }]
         )
         
         executor = OrderExecutor(client=mock_client, config=config)

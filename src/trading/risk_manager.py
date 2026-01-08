@@ -370,15 +370,16 @@ class SettlementTracker:
         if exit_time is None:
             exit_time = datetime.now()
         
-        # Add 2 business days for settlement
         settlement_time = self._add_business_days(exit_time, 2)
         
         self.settled_positions[position_id] = exit_amount
-        self.pending_settlements[position_id] = settlement_time
+        
+        if settlement_time > datetime.now():
+            self.pending_settlements[position_id] = settlement_time
         
         self.logger.info(
-            f"📅 Settlement tracked: ${exit_amount:.2f} from {position_id}\n"
-            f"   Will settle: {settlement_time.strftime('%Y-%m-%d %H:%M:%S')}"
+            f"Settlement tracked: ${exit_amount:.2f} from {position_id} "
+            f"Will settle: {settlement_time.strftime('%Y-%m-%d %H:%M:%S')}"
         )
     
     @staticmethod
@@ -400,12 +401,18 @@ class SettlementTracker:
         """
         now = datetime.now()
         available = 0
-        
-        for position_id, settlement_time in list(self.pending_settlements.items()):
+
+        # First, accumulate all available amounts
+        to_remove = []
+        for position_id, settlement_time in self.pending_settlements.items():
             if settlement_time <= now:
                 if position_id in self.settled_positions:
                     available += self.settled_positions[position_id]
-                    del self.pending_settlements[position_id]
+                to_remove.append(position_id)
+        
+        # Then remove from pending (after accumulation)
+        for position_id in to_remove:
+            del self.pending_settlements[position_id]
         
         return available
     

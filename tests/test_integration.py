@@ -45,7 +45,7 @@ class TestIntegration:
         
         # 3. Create spike
         sample_market.last_price_cents = 6500  # 0.65 (8.3% increase)
-        spikes = spike_detector.detect_spikes(threshold)
+        spikes = spike_detector.detect_spikes(markets=[sample_market],threshold=threshold)
         
         assert len(spikes) > 0
         spike = spikes[0]
@@ -74,7 +74,7 @@ class TestIntegration:
         assert len(position_manager.get_active_positions()) == 1
         
         # 7. Evaluate for exit (profitable)
-        exit_decision = position_manager.evaluate_position(
+        exit_decision = position_manager.evaluate_position_for_exit(
             order.order_id,
             0.68  # Price moved up
         )
