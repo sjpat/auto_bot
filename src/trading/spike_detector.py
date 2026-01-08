@@ -36,49 +36,89 @@ class SpikeDetector:
         
         self.price_history[market_id].append((price, timestamp))
     
-    def detect_spikes(self, threshold: Optional[float] = None) -> List[Spike]:
+    def detect_spikes(self, markets: List = None, threshold: Optional[float] = None) -> List[Spike]:
         """
         Detect spikes across all markets
         
         Args:
+            markets: List of Market objects with current prices
             threshold: Price change percentage (overrides config)
         
         Returns:
             List of detected spikes
         """
-
         threshold = threshold or self.config.SPIKE_THRESHOLD
         spikes = []
         
-        for market_id, price_history in self.price_history.items():
-            if len(price_history) < 2:
-                continue
-            
-            # Extract just price values (not tuples)
-            prices = [p if isinstance(p, (int, float)) else p[0] for p in price_history]
-            
-            # Calculate mean
-            mean_price = sum(prices) / len(prices)
-            
-            # Get current price from history
-            current_price = prices[-1]
-            
-            if mean_price == 0:
-                continue
-            
-            # Calculate change
-            change_pct = (current_price - mean_price) / mean_price
-            
-            if abs(change_pct) >= threshold:
-                spike = Spike(
-                    market_id=market_id,
-                    current_price=current_price,
-                    previous_price=mean_price,
-                    change_pct=change_pct,
-                    direction='buy' if change_pct > 0 else 'sell',
-                    timestamp=datetime.now()
-                )
-                spikes.append(spike)
+        # If markets provided, check them against price history
+        if markets:
+            for market in markets:
+                market_id = market.market_id
+                
+                # Need sufficient price history
+                if market_id not in self.price_history:
+                    continue
+                
+                price_history = self.price_history[market_id]
+                if len(price_history) < 20:
+                    continue
+                
+                # Extract just price values (not tuples)
+                prices = [p if isinstance(p, (int, float)) else p[0] for p in price_history]
+                
+                # Calculate mean of historical prices
+                mean_price = sum(prices) / len(prices)
+                
+                if mean_price == 0:
+                    continue
+                
+                # Get current price from market (convert cents to dollars)
+                current_price = market.last_price_cents / 100.0
+                
+                # Calculate change
+                change_pct = (current_price - mean_price) / mean_price
+                
+                if abs(change_pct) >= threshold:
+                    spike = Spike(
+                        market_id=market_id,
+                        current_price=current_price,
+                        previous_price=mean_price,
+                        change_pct=change_pct,
+                        direction='buy' if change_pct > 0 else 'sell',
+                        timestamp=datetime.now()
+                    )
+                    spikes.append(spike)
+        else:
+            # Legacy behavior: check price_history only
+            for market_id, price_history in self.price_history.items():
+                if len(price_history) < 20:
+                    continue
+                
+                # Extract just price values (not tuples)
+                prices = [p if isinstance(p, (int, float)) else p[0] for p in price_history]
+                
+                # Calculate mean
+                mean_price = sum(prices) / len(prices)
+                
+                # Get current price from history
+                current_price = prices[-1]
+                
+                if mean_price == 0:
+                    continue
+                
+                # Calculate change
+                change_pct = (current_price - mean_price) / mean_price
+                
+                if abs(change_pct) >= threshold:
+                    spike = Spike(
+                        market_id=market_id,
+                        current_price=current_price,
+                        previous_price=mean_price,
+                        change_pct=change_pct,
+                        direction='buy' if change_pct > 0 else 'sell',
+                        timestamp=datetime.now()
+                    )
+                    spikes.append(spike)
         
         return spikes
     

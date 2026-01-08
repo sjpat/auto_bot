@@ -90,18 +90,58 @@ class OrderExecutor:
         raise TimeoutError(f"Order {order_id} did not fill within {max_wait_seconds}s")
     
     async def submit_order(
-        self,
-        market_id: str,
-        side: str,
-        size: int,
-        price: float,
+        self, 
+        market_id: str, 
+        side: str, 
+        size: int, 
+        price: float, 
         order_type: str = "limit"
-    ):
-        """Submit an order."""
-        return await self.client.create_order(
-            market_id=market_id,
-            side=side,
-            quantity=size,
-            price=price,
-            order_type=order_type
+    ) -> dict:
+        """
+        Submit an order with automatic retry logic.
+        
+        Returns: Dictionary with success status and order details or error
+        """
+        max_retries = 2
+        retry_delay = 1.0
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Attempt to create order
+                order = await self.client.create_order(
+                    market_id=market_id,
+                    side=side,
+                    quantity=size,
+                    price=price,
+                    order_type=order_type
+                )
+                
+                logger.info(f"Order submitted successfully: {order.get('order_id')}")
+                return {
+                    'success': True,
+                    'order': order,
+                    'order_id': order.get('order_id')
+                }
+                
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"Order submission attempt {attempt + 1}/{max_retries} failed: {e}"
+                )
+                
+                # Wait before retrying (exponential backoff)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay * (attempt + 1))
+        
+        # All retries exhausted - return error dict instead of raising
+        logger.error(
+            f"Order submission failed after {max_retries} attempts. "
+            f"Last error: {last_error}"
         )
+        
+        return {
+            'success': False,
+            'error': f"API Error: {str(last_error)}",
+            'attempts': max_retries
+        }

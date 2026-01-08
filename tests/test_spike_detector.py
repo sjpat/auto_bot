@@ -42,7 +42,7 @@ class TestSpikeDetector:
                 timestamp=datetime.now()
             )
         
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) == 0
     
     def test_spike_detection_no_spike(self, config, sample_market):
@@ -57,7 +57,7 @@ class TestSpikeDetector:
                 timestamp=datetime.now()
             )
         
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) == 0
     
     def test_spike_detection_upward(self, config, sample_market):
@@ -83,7 +83,7 @@ class TestSpikeDetector:
         # Current price is spike
         sample_market.last_price_cents = 6500  # 0.65 (8.3% above baseline)
         
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) >= 1
         assert spikes[0].change_pct > 0.04  # Above threshold
     
@@ -102,7 +102,7 @@ class TestSpikeDetector:
         # Current price drops
         sample_market.last_price_cents = 6500  # 0.65 (7.1% below baseline)
         
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) >= 1
         assert abs(spikes[0].change_pct) > 0.04
     
@@ -120,10 +120,10 @@ class TestSpikeDetector:
         
         # Test 3% move (below 4% threshold)
         sample_market.last_price_cents = 6180  # 0.618 (3% move)
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) == 0
         
         # Test 5% move (above 4% threshold)
         sample_market.last_price_cents = 6300  # 0.63 (5% move)
-        spikes = detector.detect_spikes(threshold)
+        spikes = detector.detect_spikes(markets=[sample_market], threshold=threshold)
         assert len(spikes) >= 1

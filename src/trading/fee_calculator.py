@@ -252,7 +252,8 @@ class FeeCalculator:
         gross_profit = exit_notional - entry_notional
         total_fees = entry_fee + exit_fee
         net_profit = exit_total - entry_total
-        return_pct = net_profit / entry_total if entry_total > 0 else 0
+        # return_pct = net_profit / entry_total if entry_total > 0 else 0
+        return_pct = net_profit / entry_notional if entry_notional > 0 else 0
         
         return PnLInfo(
             entry_price=entry_price,

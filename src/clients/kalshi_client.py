@@ -433,8 +433,7 @@ class KalshiClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.close()
-
-
+        
 # Helper function for testing connection
 async def verify_kalshi_connection(
     api_key_id: str,
