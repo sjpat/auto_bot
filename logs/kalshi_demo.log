@@ -1,0 +1,39 @@
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-07 15:23:53
+2026-01-07 15:23:53 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-07 15:23:54 | INFO     | TradingBot | __init__:61 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-07 15:23:54 | INFO     | TradingBot | run:301 | Starting balance: $1000.00
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-07 22:05:09
+2026-01-07 22:05:09 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-07 22:05:10 | INFO     | TradingBot | __init__:61 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-07 22:05:10 | INFO     | TradingBot | run:301 | Starting balance: $1000.00
+2026-01-07 16:05:15 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:05:38 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:07 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:07 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:08 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:08 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:08 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:16 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:16 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:16 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:16 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:06:17 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-07 22:07:19
+2026-01-07 22:07:19 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-07 22:07:20 | INFO     | TradingBot | __init__:61 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-07 22:07:20 | INFO     | TradingBot | run:301 | Starting balance: $1000.00
+2026-01-08 14:34:36 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-08 14:34:37 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-08 14:34:37 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
