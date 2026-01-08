@@ -10,13 +10,13 @@ import math
 class Spike:
     """Represents a detected price spike"""
     market_id: str
-    market_name: str
+    # market_name: Optional[str]
     direction: str  # "buy" or "sell"
     current_price: float
     previous_price: float
     change_pct: float
     timestamp: datetime
-    confidence: float  # 0.0-1.0
+    # confidence: Optional[float]  # 0.0-1.0
 
 class SpikeDetector:
     """Detects significant price spikes in prediction markets"""
@@ -50,42 +50,35 @@ class SpikeDetector:
         threshold = threshold or self.config.SPIKE_THRESHOLD
         spikes = []
         
-        for market_id, prices in self.price_history.items():
-            if len(prices) < 2:
-                continue  # Need at least 2 points
-            
-            # Get current and previous prices
-            current_price, current_time = prices[-1]
-            previous_price, previous_time = prices[-2]
-            
-            # Calculate change
-            if previous_price == 0:
+        for market_id, price_history in self.price_history.items():
+            if len(price_history) < 2:
                 continue
             
-            change_pct = (current_price - previous_price) / previous_price
+            # Extract just price values (not tuples)
+            prices = [p if isinstance(p, (int, float)) else p[0] for p in price_history]
             
-            # Check spike condition
+            # Calculate mean
+            mean_price = sum(prices) / len(prices)
+            
+            # Get current price from history
+            current_price = prices[-1]
+            
+            if mean_price == 0:
+                continue
+            
+            # Calculate change
+            change_pct = (current_price - mean_price) / mean_price
+            
             if abs(change_pct) >= threshold:
-                # Check cooldown (avoid repeat trades on same spike)
-                if self._check_cooldown(market_id, current_time):
-                    continue
-                
-                # Create spike object
                 spike = Spike(
                     market_id=market_id,
-                    market_name=self._get_market_name(market_id),
-                    direction="buy" if change_pct < 0 else "sell",
                     current_price=current_price,
-                    previous_price=previous_price,
+                    previous_price=mean_price,
                     change_pct=change_pct,
-                    timestamp=current_time,
-                    confidence=self._calculate_confidence(
-                        market_id, change_pct
-                    )
+                    direction='buy' if change_pct > 0 else 'sell',
+                    timestamp=datetime.now()
                 )
-                
                 spikes.append(spike)
-                self.spike_cooldown[market_id] = current_time
         
         return spikes
     

@@ -51,7 +51,7 @@ class Market:
     @property
     def price(self) -> float:
         """Get last price as float (0.00-1.00)."""
-        return self.last_price_cents / 100.0 
+        return self.last_price_cents / 10000.0 
     
     @property
     def liquidity_usd(self) -> float:
@@ -100,7 +100,7 @@ class Order:
     @property
     def avg_fill_price(self) -> float:
         """Get average fill price as float."""
-        return self.avg_fill_price_cents / 100.0
+        return self.avg_fill_price_cents / 10000.0
     
     @property
     def is_filled(self) -> bool:

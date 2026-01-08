@@ -5,7 +5,7 @@ Tests for order execution.
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from src.trading.order_executor import OrderExecutor
-
+from tests.conftest import sample_order
 
 class TestOrderExecutor:
     """Test order executor functionality."""

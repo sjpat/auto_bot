@@ -44,6 +44,7 @@ class AccountStatusMonitor:
         self.api_error_count = 0
         self.api_error_threshold = 5
         self.last_error_timestamp = None
+        self.last_error = None
         self.error_recovery_window_seconds = 300  # 5 minutes
     
     def handle_api_error(self, status_code: int, error: Exception) -> bool:
@@ -57,6 +58,9 @@ class AccountStatusMonitor:
         Returns:
             True if account likely suspended, False otherwise
         """
+        self.last_error = error
+        self.last_error_timestamp = datetime.now()
+
         # Immediate suspension indicators
         if status_code in [401, 403]:
             self.logger.critical(
@@ -100,7 +104,7 @@ class AccountStatusMonitor:
         return {
             'suspended': self.suspended,
             'api_errors': self.api_error_count,
-            'last_error': self.last_error_timestamp,
+            'last_error': self.last_error,
             'recovery_window': self.error_recovery_window_seconds
         }
 
@@ -397,9 +401,11 @@ class SettlementTracker:
         now = datetime.now()
         available = 0
         
-        for position_id, settlement_time in self.pending_settlements.items():
-            if settlement_time <= now and position_id in self.settled_positions:
-                available += self.settled_positions[position_id]
+        for position_id, settlement_time in list(self.pending_settlements.items()):
+            if settlement_time <= now:
+                if position_id in self.settled_positions:
+                    available += self.settled_positions[position_id]
+                    del self.pending_settlements[position_id]
         
         return available
     
