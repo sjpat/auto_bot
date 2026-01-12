@@ -11,7 +11,7 @@ load_dotenv()
 class Config:
     """Configuration container for both Polymarket and Kalshi"""
     
-    platform: Literal["polymarket", "kalshi"]
+    platform: Literal["polymarket", "kalshi"] = "kalshi"
     
     # ===== API Configuration =====
     # Polymarket
