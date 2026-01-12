@@ -331,7 +331,9 @@ class KalshiClient:
     async def get_markets(
         self,
         status: str = "open",
-        limit: int = 1000
+        limit: int = 1000,
+        # min_volume: int = 100,  # Add this parameter
+        filter_untradeable: bool = True  # Add this parameter
     ) -> List[Market]:
         """
         Get available markets.
@@ -339,11 +341,16 @@ class KalshiClient:
         Args:
             status: Filter by status ('open', 'closed', 'halted')
             limit: Maximum number of markets to return
+            min_volume: Minimum volume in cents (default 100 = $1)
+            filter_untradeable: Skip markets with no trading activity (default True)
         
         Returns:
             List of Market objects
         """
-        params = {"status": status, "limit": limit}
+        min_volume = 1
+        # Fetch more markets since we'll filter many out
+        fetch_limit = limit * 5 if filter_untradeable else limit
+        params = {"status": status, "limit": fetch_limit}
         response = await self._request("GET", self.markets_url, params=params)
         
         markets = response.get("markets", [])
@@ -351,22 +358,61 @@ class KalshiClient:
         
         for m in markets:
             try:
+                # Parse ISO timestamp to Unix timestamp
+                close_time_str = m.get("close_time") or m.get("close_ts")
+                if isinstance(close_time_str, str):
+                    close_dt = datetime.fromisoformat(close_time_str.replace('Z', '+00:00'))
+                    close_ts = int(close_dt.timestamp())
+                else:
+                    close_ts = int(close_time_str)
+                
+                # Get prices - Kalshi returns cents (0-100), convert to basis points (0-10000)
+                last_price = m.get("last_price", 0)
+                yes_bid = m.get("yes_bid", 0)
+                yes_ask = m.get("yes_ask", 0)
+                volume = m.get("volume", 0)
+                
+                # Convert from cents (0-100) to basis points (0-10000) by multiplying by 100
+                last_price_cents = last_price * 100 if last_price > 0 else 5000  # Default to 50 cents
+                yes_bid_cents = yes_bid * 100
+                yes_ask_cents = yes_ask * 100
+                
+                # Filter untradeable markets if requested
+                if filter_untradeable:
+                    # Skip markets with no trading activity
+                    if last_price == 0 and yes_bid == 0 and yes_ask == 0:
+                        continue
+                    
+                    # Skip markets with insufficient volume
+                    if volume < min_volume:
+                        continue
+                
                 market = Market(
-                    market_id=m["id"],
+                    market_id=m["ticker"],
                     title=m["title"],
                     status=m["status"],
-                    close_ts=int(m["close_ts"]),
-                    liquidity_cents=int(m.get("liquidity_cents", 0)),
-                    last_price_cents=int(m.get("last_price_cents", 5000)),
-                    best_bid_cents=int(m.get("best_bid_cents", 4900)),
-                    best_ask_cents=int(m.get("best_ask_cents", 5100))
+                    close_ts=close_ts,
+                    liquidity_cents=volume,
+                    last_price_cents=last_price_cents,
+                    best_bid_cents=yes_bid_cents,
+                    best_ask_cents=yes_ask_cents
                 )
                 market_objects.append(market)
+                
+                # Stop if we have enough markets
+                if len(market_objects) >= limit:
+                    break
+                    
             except (KeyError, ValueError) as e:
-                self.logger.warning(f"Failed to parse market {m.get('id')}: {e}")
+                self.logger.warning(f"Failed to parse market {m.get('ticker', 'Unknown')}: {e}")
         
-        self.logger.debug(f"Retrieved {len(market_objects)} markets")
+        if filter_untradeable:
+            self.logger.debug(f"Retrieved {len(market_objects)} tradeable markets (filtered from {len(markets)} total)")
+        else:
+            self.logger.debug(f"Retrieved {len(market_objects)} markets")
+        
         return market_objects
+
     
     async def create_order(
         self,
