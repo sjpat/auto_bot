@@ -3,15 +3,13 @@ Real API integration tests to verify market data is being pulled correctly.
 These tests make REAL API calls (not mocked) to validate data quality.
 """
 import pytest
-import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.clients.kalshi_client import KalshiClient
 from src.trading.spike_detector import SpikeDetector
-from src.config import Config
 
 
 @pytest.mark.asyncio
-@pytest.mark.integration  # Mark as integration test
+@pytest.mark.integration
 async def test_real_market_data_retrieval(config):
     """
     Test that we can retrieve real market data from Kalshi API.
@@ -24,12 +22,12 @@ async def test_real_market_data_retrieval(config):
         auth_success = await client.authenticate()
         assert auth_success, "Failed to authenticate with Kalshi API"
         
-        # Get real markets
-        markets = await client.get_markets(status="open", limit=50)
+        # Get real markets with low volume filter
+        markets = await client.get_markets(status="open", limit=50, min_volume=1)
         
         # Basic validation
         assert len(markets) > 0, "No markets returned from API"
-        print(f"✅ Retrieved {len(markets)} open markets")
+        print(f"\n✅ Retrieved {len(markets)} open markets")
         
         # Validate data structure
         for market in markets[:5]:  # Check first 5
@@ -57,7 +55,11 @@ async def test_market_data_freshness(config):
     
     try:
         await client.authenticate()
-        markets = await client.get_markets(status="open", limit=20)
+        markets = await client.get_markets(status="open", limit=20, min_volume=1)
+        
+        # Skip test if no markets available
+        if len(markets) == 0:
+            pytest.skip("No markets available for testing")
         
         now = datetime.now().timestamp()
         stale_count = 0
@@ -91,12 +93,16 @@ async def test_price_data_for_spike_detection(config):
     
     try:
         await client.authenticate()
-        markets = await client.get_markets(status="open", limit=10)
+        markets = await client.get_markets(status="open", limit=10, min_volume=1)
+        
+        # Skip if no markets
+        if len(markets) == 0:
+            pytest.skip("No markets available for testing")
         
         # Add some price history for first market
-        test_market = markets
+        test_market = markets[0]  # Fixed: was missing [0]
         
-        print(f"📊 Testing spike detection with market: {test_market.market_id}")
+        print(f"\n📊 Testing spike detection with market: {test_market.market_id}")
         print(f"   Current price: ${test_market.price:.4f}")
         
         # Simulate price history by adding current price multiple times
@@ -133,12 +139,16 @@ async def test_price_variation_across_markets(config):
     
     try:
         await client.authenticate()
-        markets = await client.get_markets(status="open", limit=20)
+        markets = await client.get_markets(status="open", limit=20, min_volume=1)
+        
+        # Skip if no markets
+        if len(markets) == 0:
+            pytest.skip("No markets available for testing")
         
         prices = [m.last_price_cents for m in markets]
         unique_prices = len(set(prices))
         
-        print(f"💰 Price diversity check:")
+        print(f"\n💰 Price diversity check:")
         print(f"   Total markets: {len(markets)}")
         print(f"   Unique prices: {unique_prices}")
         print(f"   Sample prices: {prices[:10]}")

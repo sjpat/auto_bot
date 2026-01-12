@@ -180,3 +180,45 @@ Traceback (most recent call last):
   File "/Users/shyamal/Documents/Workspace/Polymarket-spike-bot-v1/tests/test_logger.py", line 26, in test_logger
     raise ValueError("Test exception")
 ValueError: Test exception
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:129 | ================================================================================
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:130 | Logger initialized: kalshi_bot
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:131 | Log level: INFO
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:133 | Log file: logs/kalshi_bot.log
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:134 | Timestamp: 2026-01-12 11:11:50
+2026-01-12 11:11:50 | INFO     | kalshi_bot | setup_logger:135 | ================================================================================
+2026-01-12 11:11:50 | INFO     | kalshi_bot | test_logger:20 | ✅ Info message (should appear)
+2026-01-12 11:11:50 | WARNING  | kalshi_bot | test_logger:21 | ⚠️ Warning message
+2026-01-12 11:11:50 | ERROR    | kalshi_bot | test_logger:22 | ❌ Error message
+2026-01-12 11:11:50 | ERROR    | kalshi_bot | test_logger:28 | Exception caught:
+Traceback (most recent call last):
+  File "/Users/shyamal/Documents/Workspace/Polymarket-spike-bot-v1/tests/test_logger.py", line 26, in test_logger
+    raise ValueError("Test exception")
+ValueError: Test exception
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:129 | ================================================================================
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:130 | Logger initialized: kalshi_bot
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:131 | Log level: INFO
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:133 | Log file: logs/kalshi_bot.log
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:134 | Timestamp: 2026-01-12 11:42:09
+2026-01-12 11:42:09 | INFO     | kalshi_bot | setup_logger:135 | ================================================================================
+2026-01-12 11:42:09 | INFO     | kalshi_bot | test_logger:20 | ✅ Info message (should appear)
+2026-01-12 11:42:09 | WARNING  | kalshi_bot | test_logger:21 | ⚠️ Warning message
+2026-01-12 11:42:09 | ERROR    | kalshi_bot | test_logger:22 | ❌ Error message
+2026-01-12 11:42:09 | ERROR    | kalshi_bot | test_logger:28 | Exception caught:
+Traceback (most recent call last):
+  File "/Users/shyamal/Documents/Workspace/Polymarket-spike-bot-v1/tests/test_logger.py", line 26, in test_logger
+    raise ValueError("Test exception")
+ValueError: Test exception
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:129 | ================================================================================
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:130 | Logger initialized: kalshi_bot
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:131 | Log level: INFO
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:133 | Log file: logs/kalshi_bot.log
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:134 | Timestamp: 2026-01-12 11:46:06
+2026-01-12 11:46:06 | INFO     | kalshi_bot | setup_logger:135 | ================================================================================
+2026-01-12 11:46:06 | INFO     | kalshi_bot | test_logger:20 | ✅ Info message (should appear)
+2026-01-12 11:46:06 | WARNING  | kalshi_bot | test_logger:21 | ⚠️ Warning message
+2026-01-12 11:46:06 | ERROR    | kalshi_bot | test_logger:22 | ❌ Error message
+2026-01-12 11:46:06 | ERROR    | kalshi_bot | test_logger:28 | Exception caught:
+Traceback (most recent call last):
+  File "/Users/shyamal/Documents/Workspace/Polymarket-spike-bot-v1/tests/test_logger.py", line 26, in test_logger
+    raise ValueError("Test exception")
+ValueError: Test exception

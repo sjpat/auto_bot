@@ -332,7 +332,7 @@ class KalshiClient:
         self,
         status: str = "open",
         limit: int = 1000,
-        # min_volume: int = 100,  # Add this parameter
+        min_volume: int = 1,  # Add this parameter
         filter_untradeable: bool = True  # Add this parameter
     ) -> List[Market]:
         """
@@ -347,7 +347,6 @@ class KalshiClient:
         Returns:
             List of Market objects
         """
-        min_volume = 1
         # Fetch more markets since we'll filter many out
         fetch_limit = limit * 5 if filter_untradeable else limit
         params = {"status": status, "limit": fetch_limit}

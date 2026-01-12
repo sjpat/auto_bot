@@ -48,14 +48,14 @@ class TestKalshiClient:
         mock_markets = {
             'markets': [
                 {
-                    'id': 'MARKET1',
+                    'ticker': 'MARKET1',  # Changed from 'id'
                     'title': 'Test Market 1',
                     'status': 'open',
-                    'close_ts': 1234567890,
-                    'liquidity_cents': 50000,
-                    'last_price_cents': 6500,
-                    'best_bid_cents': 6450,
-                    'best_ask_cents': 6550
+                    'close_time': '2026-01-27T01:00:00Z',  # Changed from close_ts
+                    'volume': 50000,  # Changed from liquidity_cents
+                    'last_price': 65,  # Changed from last_price_cents (and value from 6500 to 65)
+                    'yes_bid': 64,  # Changed from best_bid_cents
+                    'yes_ask': 66  # Changed from best_ask_cents
                 }
             ]
         }
@@ -63,10 +63,10 @@ class TestKalshiClient:
         with patch.object(client, '_request', new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_markets
             
-            markets = await client.get_markets(status='open', limit=10)
+            markets = await client.get_markets(status='open', limit=10, filter_untradeable=False)
             assert len(markets) == 1
             assert markets[0].market_id == 'MARKET1'
-            assert markets[0].price == 0.65
+            assert markets[0].price == 0.65  # 65 cents * 100 / 10000 = 0.65
     
     @pytest.mark.asyncio
     async def test_price_conversion(self, sample_market):
