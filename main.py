@@ -435,19 +435,10 @@ class TradingBot:
 
 # Entry point
 if __name__ == "__main__":
-    # Parse command line args
-    platform = sys.argv[1] if len(sys.argv) > 1 else "polymarket"
-    
-    print(f"Starting trading bot on platform: {platform}")
-    # Create and run bot
+    platform = sys.argv[1] if len(sys.argv) > 1 else "kalshi"
     bot = TradingBot(platform=platform)
     
-    # Handle signals
-    def signal_handler(sig, frame):
-        asyncio.create_task(bot.shutdown())
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # Run
-    asyncio.run(bot.run())
+    try:
+        asyncio.run(bot.run())
+    except KeyboardInterrupt:
+        print("\n⚠️  Shutdown signal received")

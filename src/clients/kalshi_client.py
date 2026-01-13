@@ -355,7 +355,7 @@ class KalshiClient:
         )
         
         # Fetch more markets since we'll filter many out
-        fetch_limit = limit * 5 if filter_untradeable else limit
+        fetch_limit = min(limit * 5, 1000) if filter_untradeable else limit
         params = {"status": status, "limit": fetch_limit}
         response = await self._request("GET", self.markets_url, params=params)
         
