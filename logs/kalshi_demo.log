@@ -51,3 +51,27 @@
 2026-01-12 08:18:23 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
 2026-01-12 08:18:23 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
 2026-01-12 08:18:23 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-12 14:08:53
+2026-01-12 14:08:53 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-12 14:08:53 | INFO     | TradingBot | __init__:61 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-12 14:08:53 | INFO     | TradingBot | run:301 | Starting balance: $1000.00
+2026-01-12 20:56:17 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:56:18 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:56:18 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:56:18 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:56:18 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:56:19 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-12 20:58:42
+2026-01-12 20:58:42 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-12 20:58:42 | INFO     | TradingBot | __init__:61 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-12 20:58:42 | INFO     | TradingBot | run:301 | Starting balance: $1000.00
+2026-01-13 08:01:46 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
+2026-01-13 08:01:49 | INFO     | TradingBot | shutdown:377 | Bot shutdown complete
