@@ -104,7 +104,7 @@ class TradingBot:
                 raise ValueError(f"Insufficient balance: ${balance:.2f}")
             
             # ✅ Initialize daily risk limits
-            await self.riskmanager.initialize_daily(balance)
+            await self.risk_manager.initialize_daily(balance)
             self.logger.info("✅ Daily risk limits initialized")
             
             # Fetch initial market data
@@ -133,7 +133,7 @@ class TradingBot:
                     market_id = market.market_id if hasattr(market, 'market_id') else market.id
                     price = market.price if hasattr(market, 'price') else market.current_price
                     
-                    self.spikedetector.add_price(
+                    self.spike_detector.add_price(
                         market_id=market_id,
                         price=price,
                         timestamp=datetime.now()
@@ -149,7 +149,7 @@ class TradingBot:
     async def get_tradeable_markets(self):
         """Get all tradeable markets from Kalshi."""
         try:
-            markets = await self.kalshi_client.get_markets(status="open")
+            markets = await self.client.get_markets(status="open")
             
             # Filter to tradeable (open + sufficient liquidity)
             tradeable = [m for m in markets if m.is_tradeable]
@@ -166,7 +166,7 @@ class TradingBot:
         while self.running:
             try:
                 # Detect spikes (only on markets with price history)
-                spikes = self.spikedetector.detect_spikes(
+                spikes = self.spike_detector.detect_spikes(
                     threshold=self.config.SPIKE_THRESHOLD
                 )
                 
@@ -174,7 +174,7 @@ class TradingBot:
                 
                 for spike in spikes:
                     # Pre-trade validation
-                    risk_check = await self.riskmanager.can_trade_pre_submission(spike)
+                    risk_check = await self.risk_manager.can_trade_pre_submission(spike)
                     if not risk_check.passed:
                         self.logger.warning(
                             f"Trade rejected: {risk_check.reason} "
@@ -290,72 +290,21 @@ class TradingBot:
             self.logger.error(f"Exit execution failed: {e}", exc_info=True)
     
     async def run(self):
-        """Main bot loop with risk management."""
-        self.loop_count += 1
-
+        """Main bot loop with concurrent price updates, spike detection, and position management."""
         try:
-            # Initialize daily risk limits at startup
-            starting_balance = await self.client.get_balance()
-            await self.risk_manager.initialize_daily(starting_balance)
+            # Initialize
+            await self.initialize()
             
-            self.logger.info(f"Starting balance: ${starting_balance:.2f}")
+            # Start all three loops concurrently
+            await asyncio.gather(
+                self.price_update_loop(),
+                self.spike_detection_loop(),
+                self.position_management_loop(),
+                return_exceptions=True
+            )
             
-            # Main trading loop
-            while True:
-                try:
-                    # Get current balance and check daily loss
-                    current_balance = await self.client.get_balance()
-                    loss_status = await self.risk_manager.check_daily_loss(current_balance)
-                    
-                    if loss_status['exceeded']:
-                        self.logger.critical(
-                            f"🔴 Daily loss limit exceeded. Halting trading.\n"
-                            f"Loss: ${loss_status['loss_dollars']:.2f} "
-                            f"({loss_status['loss_pct']:.1%})"
-                        )
-                        break
-                    
-                    # Get spikes
-                    markets = await self.price_update_loop()
-                    spikes = self.spike_detector.detect_spikes(markets)
-                    
-                    # For each spike, check risk before trading
-                    for spike in spikes:
-                        risk_check = await self.risk_manager.can_trade_pre_submission(spike)
-                        
-                        if not risk_check.passed:
-                            self.logger.warning(
-                                f"Trade rejected: {risk_check.reason} "
-                                f"(Details: {risk_check.details})"
-                            )
-                            continue
-                        
-                        # Safe to trade - execute order
-                        await self.execute_spike_trade(spike)
-                    
-                    # Position management
-                    await self.manage_positions()
-                    
-                    # Print risk summary every 10 minutes
-                    if self.loop_count % 600 == 0:
-                        summary = self.risk_manager.get_risk_summary()
-                        self.logger.info(f"Risk Summary: {summary}")
-                    
-                    await asyncio.sleep(0.1)
-                
-                except Exception as e:
-                    # Handle API errors with risk manager
-                    if hasattr(e, 'status_code'):
-                        is_suspended = self.risk_manager.handle_api_error(
-                            e.status_code, e
-                        )
-                        if is_suspended:
-                            self.logger.critical("Account suspended - halting")
-                            break
-                    
-                    self.logger.error(f"Error in main loop: {e}", exc_info=True)
-                    await asyncio.sleep(1)
-        
+        except Exception as e:
+            self.logger.error(f"Error in main loop: {e}", exc_info=True)
         finally:
             self.logger.info("Bot shutting down")
             await self.shutdown()
@@ -392,7 +341,7 @@ class TradingBot:
         )
         
         # Check if entry is affordable
-        available_balance = await self.kalshi_client.get_balance()
+        available_balance = await self.client.get_balance()
         
         if entry_info['total_cost'] > available_balance:
             self.logger.warning(f"❌ Insufficient balance for entry")
@@ -404,8 +353,8 @@ class TradingBot:
         """Calculate final P&L after trade completes."""
         
         # Get fill prices
-        entry_order = await self.kalshi_client.get_order(trade_info['entry_order'].order_id)
-        exit_order = await self.kalshi_client.get_order(trade_info['exit_order'].order_id)
+        entry_order = await self.client.get_order(trade_info['entry_order'].order_id)
+        exit_order = await self.client.get_order(trade_info['exit_order'].order_id)
         
         if not (entry_order.is_filled and exit_order.is_filled):
             return None
