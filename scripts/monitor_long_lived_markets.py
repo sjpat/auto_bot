@@ -38,7 +38,7 @@ async def main():
         all_markets = await client.get_markets(
             status="open",
             limit=200,
-            min_volume=0,
+            min_volume=100,
             filter_untradeable=False
         )
         

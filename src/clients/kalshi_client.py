@@ -327,7 +327,76 @@ class KalshiClient:
         balance_usd = balance_cents / 100.0
         self.logger.debug(f"Account balance: ${balance_usd:.2f}")
         return balance_usd
+
+    async def get_market_history(
+        self,
+        market_id: str,
+        last_seen_ts: Optional[int] = None
+    ) -> List[Dict]:
+        """
+        Get historical price statistics for a market.
+        
+        Args:
+            market_id: Market ticker
+            last_seen_ts: Optional timestamp to start from
+            
+        Returns:
+            List of historical stat snapshots
+        """
+        try:
+            params = {}
+            if last_seen_ts:
+                params['last_seen_ts'] = last_seen_ts
+            
+            response = await self.get(
+                f"/markets/{market_id}/history",
+                params=params
+            )
+            
+            return response.get('history', [])
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get market history: {e}")
+            return []
     
+    async def get_market_candlesticks(
+        self,
+        market_id: str,
+        start_ts: int,
+        end_ts: int,
+        period_interval: int = 60
+    ) -> Dict:
+        """
+        Get OHLCV candlestick data for a market.
+        
+        Args:
+            market_id: Market ticker
+            start_ts: Start timestamp (unix)
+            end_ts: End timestamp (unix)
+            period_interval: Period in minutes (1, 60, or 1440)
+            
+        Returns:
+            Dict with candlesticks list
+        """
+        try:
+            params = {
+                'start_ts': start_ts,
+                'end_ts': end_ts,
+                'period_interval': period_interval
+            }
+            
+            response = await self.get(
+                f"/markets/{market_id}/candlesticks",
+                params=params
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get candlesticks: {e}")
+            return {'candlesticks': []}
+
+
     async def get_markets(
         self,
         status: str = "open",

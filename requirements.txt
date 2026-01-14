@@ -13,3 +13,5 @@ kalshi-python==1.0.0
 cryptography
 py-order-utils==0.3.2
 PyJWT
+chart-studio>=1.1.0
+matplotlib>=3.5.0 
