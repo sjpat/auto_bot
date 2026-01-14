@@ -34,7 +34,7 @@ async def main():
     # Backtest parameters
     backtest_config = BacktestConfig(
         starting_balance=10000,
-        spike_threshold=0.10,  # 10% spike threshold
+        spike_threshold=0.04,  # 10% spike threshold
         max_position_size=100,
         position_size_pct=0.02,  # 2% per trade
         stop_loss_pct=0.20,  # 20% stop loss
@@ -47,7 +47,7 @@ async def main():
     
     # Date range for backtest
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)  # Last 30 days
+    start_date = end_date - timedelta(days=365)  # Last 30 days
     
     print(f"\n📅 Backtest Period: {start_date.date()} to {end_date.date()}")
     print(f"💰 Starting Balance: ${backtest_config.starting_balance:,.2f}")

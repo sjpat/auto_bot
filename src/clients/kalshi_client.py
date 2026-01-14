@@ -328,6 +328,32 @@ class KalshiClient:
         self.logger.debug(f"Account balance: ${balance_usd:.2f}")
         return balance_usd
 
+    async def get(self, path: str, params: Optional[Dict] = None) -> Dict:
+        """
+        Generic GET request using existing _request method
+        
+        Args:
+            path: API endpoint path (e.g., '/markets/TICKER/history')
+            params: Optional query parameters
+            
+        Returns:
+            JSON response as dict
+        """
+        return await self._request("GET", path, params=params)
+    
+    async def post(self, path: str, data: Optional[Dict] = None) -> Dict:
+        """
+        Generic POST request using existing _request method
+        
+        Args:
+            path: API endpoint path
+            data: Optional request body
+            
+        Returns:
+            JSON response as dict
+        """
+        return await self._request("POST", path, json=data)
+    
     async def get_market_history(
         self,
         market_id: str,
@@ -348,15 +374,17 @@ class KalshiClient:
             if last_seen_ts:
                 params['last_seen_ts'] = last_seen_ts
             
+            # Kalshi API endpoint for market history
             response = await self.get(
                 f"/markets/{market_id}/history",
                 params=params
             )
             
+            # The response should have a 'history' field
             return response.get('history', [])
             
         except Exception as e:
-            self.logger.error(f"Failed to get market history: {e}")
+            self.logger.error(f"Failed to get market history for {market_id}: {e}")
             return []
     
     async def get_market_candlesticks(
@@ -393,7 +421,7 @@ class KalshiClient:
             return response
             
         except Exception as e:
-            self.logger.error(f"Failed to get candlesticks: {e}")
+            self.logger.error(f"Failed to get candlesticks for {market_id}: {e}")
             return {'candlesticks': []}
 
 
