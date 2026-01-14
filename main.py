@@ -124,7 +124,10 @@ class TradingBot:
             try:
                 # Get tradeable markets (filtered by platform)
                 if self.platform == "kalshi":
-                    markets = await self.get_tradeable_markets()
+                    markets = await self.get_tradeable_markets(
+                        status="open",
+                        filter_untradeable=False
+                    )
                 else:
                     markets = await self.client.get_markets()
                 
@@ -147,16 +150,13 @@ class TradingBot:
                 await asyncio.sleep(5)
     
     async def get_tradeable_markets(self):
-        """Get all tradeable markets from Kalshi."""
+        """Get all open markets from Kalshi."""
         try:
             markets = await self.client.get_markets(status="open")
             
-            # Filter to tradeable (open + sufficient liquidity)
-            tradeable = [m for m in markets if m.is_tradeable]
+            self.logger.info(f"Found {len(markets)} open markets")
+            return markets  # Return ALL markets, filter for trading later
             
-            self.logger.info(f"Found {len(tradeable)} tradeable markets")
-            return tradeable
-        
         except Exception as e:
             self.logger.error(f"Failed to get markets: {e}")
             return []
@@ -173,6 +173,13 @@ class TradingBot:
                 self.logger.debug(f"Detected {len(spikes)} spikes")
                 
                 for spike in spikes:
+                    market_info = await self.client.get_markets(status="open")
+                    market = next((m for m in market_info if m.market_id == spike.market_id), None)
+                    
+                    if not market or not market.is_tradeable:
+                        self.logger.debug(f"Skipping spike on non-tradeable market: {spike.market_id}")
+                        continue        
+
                     # Pre-trade validation
                     risk_check = await self.risk_manager.can_trade_pre_submission(spike)
                     if not risk_check.passed:
