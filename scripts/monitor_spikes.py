@@ -48,7 +48,7 @@ async def main():
                 status="open",
                 limit=50,
                 min_volume=0,
-                filter_untradeable=True
+                filter_untradeable=False
             )
             
             if len(markets) == 0:
