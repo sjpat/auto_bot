@@ -76,7 +76,7 @@ class Market:
     @property
     def is_tradeable(self) -> bool:
         """Check if market is tradeable (open + sufficient liquidity)."""
-        return self.is_open and self.liquidity_usd >= 200
+        return self.is_open and self.liquidity_usd >= 1.0
 
 
 @dataclass
