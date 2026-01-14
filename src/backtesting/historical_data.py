@@ -117,51 +117,46 @@ class HistoricalDataFetcher:
     ) -> List:
         """
         Fetch markets that have closed and settled within a date range.
-        
-        Args:
-            start_date: Start of date range
-            end_date: End of date range
-            min_volume: Minimum volume filter (in dollars)
-            category: Optional category filter (e.g., 'politics', 'sports')
-            
-        Returns:
-            List of settled markets
         """
         try:
             # Fetch settled markets
-            markets = await self.client.get_markets(
-                status="settled",
-                limit=1000  # Get many markets for backtesting
-            )
+            markets = await self.client.get_markets(status="settled", limit=1000)
+            self.logger.info(f"Found {len(markets)} settled markets")
             
-            # Filter by date range and volume
+            if len(markets) < 10:
+                # If not many settled, also get closed markets
+                self.logger.info("Few settled markets found, also fetching closed markets...")
+                closed_markets = await self.client.get_markets(status="closed", limit=1000)
+                markets.extend(closed_markets)
+                self.logger.info(f"Total markets (settled + closed): {len(markets)}")
+            
+            # Filter by volume/activity
             filtered_markets = []
             for market in markets:
-                # Parse settlement timestamp
-                if not hasattr(market, 'settlement_ts'):
-                    continue
-                    
-                settlement_date = datetime.fromisoformat(
-                    market.settlement_ts.replace('Z', '+00:00')
-                )
+                # Get volume/liquidity (try different attributes)
+                volume = 0
+                if hasattr(market, 'volume_24h'):
+                    volume = market.volume_24h / 100  # Convert cents to dollars
+                elif hasattr(market, 'liquidity_usd'):
+                    volume = market.liquidity_usd
                 
-                # Check date range
-                if start_date <= settlement_date <= end_date:
-                    # Check volume
-                    if market.volume >= min_volume * 100:  # Convert to cents
-                        # Check category if specified
-                        if category is None or market.category == category:
-                            filtered_markets.append(market)
+                # Check if meets minimum threshold
+                if volume >= min_volume:
+                    # Check category if specified
+                    if category is None or (hasattr(market, 'category') and market.category == category):
+                        filtered_markets.append(market)
             
             self.logger.info(
-                f"Found {len(filtered_markets)} settled markets "
-                f"between {start_date.date()} and {end_date.date()}"
+                f"After filtering (min_volume=${min_volume}): {len(filtered_markets)} markets"
             )
             return filtered_markets
             
         except Exception as e:
-            self.logger.error(f"Failed to fetch settled markets: {e}")
+            self.logger.error(f"Failed to fetch markets: {e}")
+            import traceback
+            traceback.print_exc()
             return []
+
     
     async def fetch_candlesticks(
         self,
