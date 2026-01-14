@@ -108,7 +108,7 @@ class TradingBot:
             self.logger.info("✅ Daily risk limits initialized")
             
             # Fetch initial market data
-            markets = await self.client.get_markets()
+            markets = await self.client.get_markets(status="open", filter_untradeable=False)
             self.logger.info(f"Loaded {len(markets)} markets")
             
             self.running = True
@@ -165,7 +165,9 @@ class TradingBot:
         """Detect spikes and trigger trades"""
         while self.running:
             try:
-                # Detect spikes (only on markets with price history)
+                all_markets = await self.client.get_markets(status="open")
+                
+                # Detect spikes
                 spikes = self.spike_detector.detect_spikes(
                     threshold=self.config.SPIKE_THRESHOLD
                 )
@@ -173,12 +175,11 @@ class TradingBot:
                 self.logger.debug(f"Detected {len(spikes)} spikes")
                 
                 for spike in spikes:
-                    market_info = await self.client.get_markets(status="open")
-                    market = next((m for m in market_info if m.market_id == spike.market_id), None)
+                    market = next((m for m in all_markets if m.market_id == spike.market_id), None)
                     
                     if not market or not market.is_tradeable:
                         self.logger.debug(f"Skipping spike on non-tradeable market: {spike.market_id}")
-                        continue        
+                        continue       
 
                     # Pre-trade validation
                     risk_check = await self.risk_manager.can_trade_pre_submission(spike)
