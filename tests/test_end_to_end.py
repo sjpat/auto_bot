@@ -24,6 +24,7 @@ class TestEndToEnd:
         config.TARGET_LOSS_USD = 2.0
         config.DAILY_LOSS_LIMIT_USD = 20.0
         config.POSITION_SIZE_USD = 10.0
+        config.PRICE_HISTORY_SIZE = 100  # Add this
         return config
     
     @pytest.fixture
@@ -33,8 +34,20 @@ class TestEndToEnd:
     
     @pytest.fixture
     def position_manager(self, config):
+        """Create position manager with proper initialization."""
+        # PositionManager needs: platform, config, risk_manager
+        # For testing, we can pass None for risk_manager
+        return PositionManager(
+            platform=config.platform,  # Should be 'kalshi' from config
+            config=config,
+            risk_manager=None  # Optional for tests
+        )
+
+    
+    @pytest.fixture
+    def position_manager(self, config):
         """Create position manager."""
-        return PositionManager(config)
+        return PositionManager(platform="kalshi",config=config)
     
     def create_synthetic_market(
         self,
@@ -354,12 +367,38 @@ class TestEndToEnd:
                 base_time - timedelta(minutes=5-i)
             )
         
-        print(f"   Price history length: {len(spike_detector.price_history.get(market.market_id, []))}")
+        history_length = len(spike_detector.price_history.get(market.market_id, []))
+        print(f"   Price history length: {history_length}")
         
         # Try to detect spikes
         print("\n🔍 Attempting spike detection...")
         market.last_price_cents = int(0.70 * 10000)  # 16.7% jump
         spikes = spike_detector.detect_spikes([market], threshold=0.04)
         
-        # Should either skip or not detect (depends on min_history requirement)
-        print(f"   Spikes detected: {len(sp
+        print(f"   Spikes detected: {len(spikes)}")
+        min_history_length = 20
+        if history_length < min_history_length:
+            assert len(spikes) == 0, "Should not detect spikes with insufficient history"
+            print(f"   ✅ Correctly skipped (need {min_history_length} points)")
+        
+        # Now add more history
+        print(f"\n📊 Adding more price data (up to {min_history_length})...")
+        for i in range(min_history_length - 5):
+            spike_detector.add_price(
+                market.market_id,
+                0.60,
+                base_time - timedelta(minutes=25-i)
+            )
+        
+        history_length = len(spike_detector.price_history.get(market.market_id, []))
+        print(f"   Price history length: {history_length}")
+        
+        # Now detection should work
+        spikes = spike_detector.detect_spikes([market], threshold=0.04)
+        print(f"   Spikes detected: {len(spikes)}")
+        
+        if history_length >= min_history_length:
+            print("   ✅ Detection now working with sufficient history")
+        
+        print("="*80)
+
