@@ -38,31 +38,27 @@ class TradeRecord:
     spike_change_pct: float = 0.0
     spike_direction: str = ""
     
-    def close_trade(
-        self,
-        exit_time: datetime,
-        exit_price: float,
-        exit_fee: float,
-        exit_reason: str
-    ):
+    def close_trade(self, exit_time, exit_price, exit_fee, exit_reason):
         """Close the trade and calculate P&L"""
         self.exit_time = exit_time
         self.exit_price = exit_price
         self.exit_fee = exit_fee
         self.exit_reason = exit_reason
+        self.hold_time = exit_time - self.entry_time
         
-        # Calculate revenue
-        self.exit_revenue = self.contracts * self.exit_price
-        
-        # Calculate P&L
         if self.entry_side == 'yes':
-            self.gross_pnl = self.exit_revenue - self.entry_cost
-        else:  # 'no' side
-            self.gross_pnl = self.entry_cost - self.exit_revenue
+            # YES position: profit when price goes up
+            entry_value = self.contracts * self.entry_price
+            exit_value = self.contracts * self.exit_price
+            self.gross_pnl = exit_value - entry_value
+        else:
+            entry_value = self.contracts * (1.0 - self.entry_price)
+            exit_value = self.contracts * (1.0 - self.exit_price)
+            self.gross_pnl = exit_value - entry_value
         
         self.net_pnl = self.gross_pnl - self.entry_fee - self.exit_fee
-        self.return_pct = self.net_pnl / self.entry_cost if self.entry_cost > 0 else 0
-        self.hold_time = exit_time - self.entry_time
+        self.return_pct = self.net_pnl / entry_value if entry_value > 0 else 0
+
     
     def is_winning_trade(self) -> bool:
         """Check if trade was profitable"""

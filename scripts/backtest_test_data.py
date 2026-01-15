@@ -69,12 +69,13 @@ async def main():
     # Backtest configuration
     config = Config(platform="kalshi")
     backtest_config = BacktestConfig(
-        starting_balance=500,
-        spike_threshold=0.04,  # 4% spike threshold
+        starting_balance=10000,
+        spike_threshold=0.04,
         position_size_pct=0.01,
         stop_loss_pct=0.05,
         take_profit_pct=0.05,
         max_hold_time=timedelta(minutes=5),
+        max_concurrent_positions=10,  # ← Configure here
         enable_fees=True
     )
     

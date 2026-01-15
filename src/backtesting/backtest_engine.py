@@ -183,72 +183,91 @@ class BacktestEngine:
         
         contracts = min(contracts, self.config.max_position_size)
         
-        # Calculate costs
-        entry_cost = contracts * spike.current_price
+        # Determine entry side (fade the spike)
+        entry_side = 'no' if spike.direction == 'up' else 'yes'
+        
+        # Calculate position size
+        position_value = self.balance * self.config.position_size_pct
+        
+        # Calculate actual cost based on side
+        if entry_side == 'no':
+            price_per_contract = 1.0 - spike.current_price
+        else:
+            price_per_contract = spike.current_price
+        
+        contracts = int(position_value / price_per_contract)
+        
+        if contracts == 0:
+            self._reject_spike("insufficient_balance")
+            return
+        
+        contracts = min(contracts, self.config.max_position_size)
+        
+        # Calculate actual costs
+        entry_cost = contracts * price_per_contract
         entry_fee = self._calculate_fee(entry_cost) if self.config.enable_fees else 0
         total_cost = entry_cost + entry_fee
         
-        # Check if we can afford it
         if total_cost > self.balance:
             self._reject_spike("insufficient_funds")
             return
         
-        # Execute trade
+        # Execute trade with corrected values
         await self._open_position(
             timestamp=timestamp,
             market_id=spike.market_id,
-            entry_price=spike.current_price,
+            entry_price=spike.current_price,  # YES price
             contracts=contracts,
-            entry_cost=entry_cost,
+            entry_cost=entry_cost,  # Actual cost paid
             entry_fee=entry_fee,
             spike=spike,
             price_point=price_point
         )
     
-    async def _open_position(
-        self,
-        timestamp: datetime,
-        market_id: str,
-        entry_price: float,
-        contracts: int,
-        entry_cost: float,
-        entry_fee: float,
-        spike,
-        price_point: HistoricalPricePoint
-    ):
+    async def _open_position(self, timestamp, market_id, entry_price, contracts, entry_cost, entry_fee, spike, price_point):
         """Open a new position"""
         self.trade_counter += 1
         
-        # Determine side based on spike direction
-        entry_side = 'yes' if spike.direction == 'up' else 'no'
+        # Determine side based on mean reversion
+        entry_side = 'no' if spike.direction == 'up' else 'yes'
+        
+        # IMPORTANT: Adjust entry_cost for NO positions
+        if entry_side == 'no':
+            # When buying NO, you pay (1 - yes_price) per contract
+            actual_entry_cost = contracts * (1.0 - entry_price)
+        else:
+            actual_entry_cost = contracts * entry_price
+        
+        # Recalculate fee based on actual cost
+        entry_fee = self._calculate_fee(actual_entry_cost)
         
         # Create trade record
         trade = TradeRecord(
             trade_id=self.trade_counter,
             market_id=market_id,
-            market_title=f"Market_{market_id}",  # Would need to fetch actual title
+            market_title=f"Market_{market_id}",
             entry_time=timestamp,
-            entry_price=entry_price,
+            entry_price=entry_price,  # This is the YES price at entry
             entry_side=entry_side,
             contracts=contracts,
-            entry_cost=entry_cost,
+            entry_cost=actual_entry_cost,  # Use corrected cost
             entry_fee=entry_fee,
             spike_change_pct=spike.change_pct,
             spike_direction=spike.direction
         )
         
-        # Update balance
-        self.balance -= (entry_cost + entry_fee)
+        # Update balance with actual cost
+        self.balance -= (actual_entry_cost + entry_fee)
         
-        # Track position
         self.positions[market_id] = trade
         self.spikes_traded += 1
         
         self.logger.info(
             f"[{timestamp}] OPEN {entry_side.upper()}: {market_id} | "
-            f"{contracts} contracts @ ${entry_price:.4f} | "
+            f"{contracts} contracts @ ${entry_price:.4f} (cost: ${actual_entry_cost:.2f}) | "
             f"Spike: {spike.change_pct:+.1%}"
         )
+
     
     async def _check_position_exits(
         self,
