@@ -114,9 +114,9 @@ class TestEndToEnd:
         print(f"   ✅ Detected {len(spikes)} spike(s)")
         
         spike_info = spikes[0]
-        print(f"   Market: {spike_info['market_id']}")
-        print(f"   Change: {spike_info['price_change']:.2%}")
-        print(f"   Current: ${spike_info['current_price']:.4f}")
+        print(f"   Market: {spike_info.market_id}")
+        print(f"   Change: {spike_info.change_pct:.2%}")
+        print(f"   Current: ${spike_info.current_price:.4f}")
         
         # Mock Kalshi client for order execution
         mock_client = AsyncMock()
@@ -129,18 +129,22 @@ class TestEndToEnd:
         
         # Open position
         print("\n💰 Opening position...")
-        position = position_manager.open_position(
+        order_id = "TEST-ORDER-001"
+        position_manager.add_position(
+            order_id=order_id,
             market_id=market.market_id,
             entry_price=spike_price,
             quantity=100,
-            side="sell"  # Sell the spike
+            side="sell"
         )
+
+        position = position_manager.positions[order_id]
         
         assert position is not None
-        print(f"   ✅ Position opened: {position.position_id}")
-        print(f"   Entry: ${position.entry_price:.4f}")
-        print(f"   Quantity: {position.quantity}")
-        print(f"   Side: {position.side}")
+        print(f"   ✅ Position opened: {position['id']}")
+        print(f"   Entry: ${position['entry_price']:.4f}")
+        print(f"   Quantity: {position['quantity']}")
+        print(f"   Side: {position['side']}")
         
         # Simulate price mean reversion - price goes back down
         exit_price = 0.32  # Profit of $0.03 per contract
@@ -150,20 +154,24 @@ class TestEndToEnd:
         current_pnl = position.calculate_pnl(exit_price)
         print(f"   Current P&L: ${current_pnl:.2f}")
         
-        should_exit, reason = position_manager.should_close_position(
-            position.position_id,
+        exit_eval = position_manager.evaluate_position_for_exit(
+            order_id,
             exit_price
         )
+        
+        should_exit = exit_eval.get('should_exit', False)
+        reason = exit_eval.get('reason', 'unknown')
         
         assert should_exit, f"Should exit position: {reason}"
         print(f"   ✅ Exit signal: {reason}")
         
         # Close position
-        final_pnl = position_manager.close_position(
-            position.position_id,
+        close_result = position_manager.close_position(
+            order_id,
             exit_price
         )
         
+        final_pnl = close_result.get('net_pnl', close_result.get('pnl', 0))
         assert final_pnl > 0, "Should have positive P&L"
         print(f"\n✅ Trade closed with profit: ${final_pnl:.2f}")
         print(f"   Expected profit: ~${(spike_price - exit_price) * 100:.2f}")
@@ -202,12 +210,17 @@ class TestEndToEnd:
         print(f"📊 Spike detected: ${spike_price:.4f}")
         
         # Open short position
-        position = position_manager.open_position(
+        order_id = "TEST-ORDER-001"
+        position_manager.add_position(
+            order_id=order_id,
             market_id=market.market_id,
             entry_price=spike_price,
             quantity=100,
             side="sell"
         )
+        
+        # Get the position from the manager
+        position = position_manager.positions[order_id]
         
         print(f"💰 Position opened at ${spike_price:.4f}")
         
@@ -262,12 +275,17 @@ class TestEndToEnd:
             market_id = f"LOSS-MARKET-{i:03d}"
             
             # Open position
-            position = position_manager.open_position(
+            order_id = "TEST-ORDER-001"
+            position_manager.add_position(
+                order_id=order_id,
                 market_id=market_id,
-                entry_price=0.50,
+                entry_price=0.5,
                 quantity=100,
                 side="sell"
             )
+            
+            # Get the position from the manager
+            position = position_manager.positions[order_id]
             
             # Close at loss
             loss = -5.0  # $5 loss each
