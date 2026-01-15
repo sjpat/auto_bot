@@ -15,14 +15,15 @@ class BacktestConfig:
     """Configuration for backtest run"""
     starting_balance: float = 10000
     spike_threshold: float = 0.10
-    max_position_size: float = 100  # Max contracts per trade
-    position_size_pct: float = 0.02  # 2% of balance per trade
-    stop_loss_pct: float = 0.20  # 20% stop loss
-    take_profit_pct: float = 0.30  # 30% take profit
+    max_position_size: float = 100
+    position_size_pct: float = 0.02
+    stop_loss_pct: float = 0.20
+    take_profit_pct: float = 0.30
     max_hold_time: timedelta = timedelta(hours=24)
-    min_liquidity: float = 100  # Minimum $100 liquidity
+    min_liquidity: float = 100
     enable_fees: bool = True
-    fee_rate: float = 0.07  # 7% maker/taker fees
+    fee_rate: float = 0.07
+    max_concurrent_positions: int = 10  # ← Add this line
 
 class BacktestEngine:
     """
@@ -160,6 +161,11 @@ class BacktestEngine:
         # Skip if already have position in this market
         if spike.market_id in self.positions:
             self._reject_spike("already_in_position")
+            return
+        
+        # Check max concurrent positions
+        if len(self.positions) >= self.config.max_concurrent_positions:
+            self._reject_spike("max_concurrent_positions")
             return
         
         # Check liquidity
@@ -347,8 +353,8 @@ class BacktestEngine:
     
     def _calculate_fee(self, notional: float) -> float:
         """Calculate trading fees"""
-        if self.fee_calculator:
-            return self.fee_calculator.calculate_fee(notional)
+        # if self.fee_calculator:
+        #     return self.fee_calculator.kalshi_fee(notional)
         return notional * self.config.fee_rate
     
     def _reject_spike(self, reason: str):

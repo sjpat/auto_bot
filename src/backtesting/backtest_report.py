@@ -73,10 +73,13 @@ class BacktestReport:
                 print(f"      {reason}: {count}")
         
         # Hold time
-        if r.avg_hold_time:
+        if r.avg_hold_time is not None:
             hours = r.avg_hold_time.total_seconds() / 3600
             print(f"\n⏱️  TIMING")
             print(f"   Average Hold Time: {hours:.1f} hours")
+        else:
+            print(f"\n⏱️  TIMING")
+            print(f"   Average Hold Time: N/A (no completed trades)")
         
         print("\n" + "="*80)
     
@@ -288,7 +291,7 @@ class BacktestReport:
             </div>
             <div class="metric-card">
                 <div class="metric-label">Avg Hold Time</div>
-                <div class="metric-value">{r.avg_hold_time.total_seconds() / 3600:.1f}h</div>
+                <div class="metric-value">{r.avg_hold_time.total_seconds() / 3600 if r.avg_hold_time else 0:.1f}h</div>
             </div>
         </div>
         

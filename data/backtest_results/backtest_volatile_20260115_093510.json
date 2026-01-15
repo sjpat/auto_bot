@@ -1,0 +1,306 @@
+{
+  "summary": {
+    "start_date": "2024-11-05T20:00:00",
+    "end_date": "2025-06-12T21:18:30",
+    "starting_balance": 10000,
+    "final_balance": 9813.268191513058,
+    "total_pnl": -140.76580190351987,
+    "win_rate": 0.0,
+    "total_trades": 17,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 0.051344533395805594,
+    "sharpe_ratio": -1.5326987369130844
+  },
+  "trades": [
+    {
+      "trade_id": 1,
+      "market_id": "PRES2024-TRUMP",
+      "entry_time": "2024-11-05T21:19:00",
+      "exit_time": "2024-11-05T21:49:00",
+      "entry_price": 0.9428786938968168,
+      "exit_price": 0.9543667968430489,
+      "contracts": 100,
+      "net_pnl": -14.429528729802279,
+      "return_pct": -0.15303695823443184,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 2,
+      "market_id": "PRES2024-TRUMP",
+      "entry_time": "2024-11-05T21:49:00",
+      "exit_time": "2024-11-05T22:19:00",
+      "entry_price": 0.9543667968430489,
+      "exit_price": 0.9515051485973214,
+      "contracts": 100,
+      "net_pnl": -13.054938793509843,
+      "return_pct": -0.13679162808989467,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 3,
+      "market_id": "PRES2024-TRUMP",
+      "entry_time": "2024-11-05T22:19:00",
+      "exit_time": "2024-11-05T22:49:00",
+      "entry_price": 0.9515051485973214,
+      "exit_price": 0.9427343071446705,
+      "contracts": 100,
+      "net_pnl": -12.382592044928858,
+      "return_pct": -0.1301368895710431,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 5,
+      "market_id": "FED-RATE-DEC24",
+      "entry_time": "2024-12-18T14:50:30",
+      "exit_time": "2024-12-18T15:22:30",
+      "entry_price": 0.8,
+      "exit_price": 0.8406571843233056,
+      "contracts": 100,
+      "net_pnl": -15.550318722593698,
+      "return_pct": -0.1943789840324212,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 7,
+      "market_id": "NFL-PLAYOFF-KC",
+      "entry_time": "2025-01-12T19:34:00",
+      "exit_time": "2025-01-12T20:04:00",
+      "entry_price": 0.64,
+      "exit_price": 0.5994589443723006,
+      "contracts": 100,
+      "net_pnl": -4.622107047836172,
+      "return_pct": -0.07222042262244019,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 8,
+      "market_id": "NFL-PLAYOFF-KC",
+      "entry_time": "2025-01-12T20:04:00",
+      "exit_time": "2025-01-12T20:28:00",
+      "entry_price": 0.5994589443723006,
+      "exit_price": 0.667126397503766,
+      "contracts": 100,
+      "net_pnl": -15.632842706278996,
+      "return_pct": -0.26078254154082725,
+      "exit_reason": "stop_loss"
+    },
+    {
+      "trade_id": 10,
+      "market_id": "TECH-EARNINGS",
+      "entry_time": "2025-01-25T16:49:00",
+      "exit_time": "2025-01-25T17:21:00",
+      "entry_price": 0.68,
+      "exit_price": 0.6927648383329015,
+      "contracts": 100,
+      "net_pnl": -10.885837701620455,
+      "return_pct": -0.16008584855324198,
+      "exit_reason": "max_hold_time"
+    },
+    {
+      "trade_id": 12,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:41:30",
+      "exit_time": "2025-06-12T20:43:00",
+      "entry_price": 0.68,
+      "exit_price": 0.61,
+      "contracts": 100,
+      "net_pnl": -2.030000000000001,
+      "return_pct": -0.029852941176470606,
+      "exit_reason": "take_profit"
+    },
+    {
+      "trade_id": 13,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:43:00",
+      "exit_time": "2025-06-12T20:44:30",
+      "entry_price": 0.61,
+      "exit_price": 0.54,
+      "contracts": 100,
+      "net_pnl": -1.0500000000000007,
+      "return_pct": -0.017213114754098372,
+      "exit_reason": "take_profit"
+    },
+    {
+      "trade_id": 14,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:44:30",
+      "exit_time": "2025-06-12T20:46:00",
+      "entry_price": 0.54,
+      "exit_price": 0.48,
+      "contracts": 100,
+      "net_pnl": -1.1400000000000006,
+      "return_pct": -0.021111111111111122,
+      "exit_reason": "take_profit"
+    },
+    {
+      "trade_id": 15,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:46:00",
+      "exit_time": "2025-06-12T20:47:30",
+      "entry_price": 0.48,
+      "exit_price": 0.42,
+      "contracts": 100,
+      "net_pnl": -0.3000000000000007,
+      "return_pct": -0.006250000000000015,
+      "exit_reason": "take_profit"
+    },
+    {
+      "trade_id": 16,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:47:30",
+      "exit_time": "2025-06-12T20:56:30",
+      "entry_price": 0.42,
+      "exit_price": 0.3697659336750791,
+      "contracts": 100,
+      "net_pnl": -0.5049549032334641,
+      "return_pct": -0.012022735791272957,
+      "exit_reason": "take_profit"
+    },
+    {
+      "trade_id": 4,
+      "market_id": "PRES2024-TRUMP",
+      "entry_time": "2024-11-05T22:49:00",
+      "exit_time": "2025-06-12T21:18:30",
+      "entry_price": 0.9427343071446705,
+      "exit_price": 0.9427343071446705,
+      "contracts": 100,
+      "net_pnl": -13.198280300025388,
+      "return_pct": -0.14,
+      "exit_reason": "backtest_end"
+    },
+    {
+      "trade_id": 6,
+      "market_id": "FED-RATE-DEC24",
+      "entry_time": "2024-12-18T15:22:30",
+      "exit_time": "2025-06-12T21:18:30",
+      "entry_price": 0.8406571843233056,
+      "exit_price": 0.8406571843233056,
+      "contracts": 100,
+      "net_pnl": -11.76920058052628,
+      "return_pct": -0.14,
+      "exit_reason": "backtest_end"
+    },
+    {
+      "trade_id": 9,
+      "market_id": "NFL-PLAYOFF-KC",
+      "entry_time": "2025-01-12T20:28:00",
+      "exit_time": "2025-06-12T21:18:30",
+      "entry_price": 0.667126397503766,
+      "exit_price": 0.667126397503766,
+      "contracts": 100,
+      "net_pnl": -9.339769565052725,
+      "return_pct": -0.14,
+      "exit_reason": "backtest_end"
+    },
+    {
+      "trade_id": 11,
+      "market_id": "TECH-EARNINGS",
+      "entry_time": "2025-01-25T17:21:00",
+      "exit_time": "2025-06-12T21:18:30",
+      "entry_price": 0.6927648383329015,
+      "exit_price": 0.6927648383329015,
+      "contracts": 100,
+      "net_pnl": -9.698707736660621,
+      "return_pct": -0.14,
+      "exit_reason": "backtest_end"
+    },
+    {
+      "trade_id": 17,
+      "market_id": "NBA-FINALS-G5",
+      "entry_time": "2025-06-12T20:56:30",
+      "exit_time": "2025-06-12T21:18:30",
+      "entry_price": 0.3697659336750791,
+      "exit_price": 0.3697659336750791,
+      "contracts": 100,
+      "net_pnl": -5.176723071451108,
+      "return_pct": -0.14,
+      "exit_reason": "backtest_end"
+    }
+  ],
+  "equity_curve": [
+    {
+      "timestamp": "2024-11-05T20:00:00",
+      "balance": 10000
+    },
+    {
+      "timestamp": "2024-11-05T20:00:00",
+      "balance": 10000
+    },
+    {
+      "timestamp": "2024-11-05T21:49:00",
+      "balance": 9987.868091859444
+    },
+    {
+      "timestamp": "2024-11-05T22:19:00",
+      "balance": 9974.240823416789
+    },
+    {
+      "timestamp": "2024-11-05T22:49:00",
+      "balance": 9960.104063081331
+    },
+    {
+      "timestamp": "2024-12-18T15:22:30",
+      "balance": 9851.812610358918
+    },
+    {
+      "timestamp": "2025-01-12T19:24:00",
+      "balance": 9761.862291636324
+    },
+    {
+      "timestamp": "2025-01-12T20:04:00",
+      "balance": 9749.131973462949
+    },
+    {
+      "timestamp": "2025-01-12T20:28:00",
+      "balance": 9747.032621382963
+    },
+    {
+      "timestamp": "2025-01-25T17:21:00",
+      "balance": 9667.31722681502
+    },
+    {
+      "timestamp": "2025-06-12T20:43:00",
+      "balance": 9577.161389113398
+    },
+    {
+      "timestamp": "2025-06-12T20:44:30",
+      "balance": 9562.111389113397
+    },
+    {
+      "timestamp": "2025-06-12T20:46:00",
+      "balance": 9548.971389113396
+    },
+    {
+      "timestamp": "2025-06-12T20:47:30",
+      "balance": 9536.671389113395
+    },
+    {
+      "timestamp": "2025-06-12T20:56:30",
+      "balance": 9526.119620945177
+    },
+    {
+      "timestamp": "2025-06-12T20:56:30",
+      "balance": 9486.554666041944
+    },
+    {
+      "timestamp": "2025-06-12T21:18:30",
+      "balance": 9574.2289566064
+    },
+    {
+      "timestamp": "2025-06-12T21:18:30",
+      "balance": 9652.410074748466
+    },
+    {
+      "timestamp": "2025-06-12T21:18:30",
+      "balance": 9714.452829716316
+    },
+    {
+      "timestamp": "2025-06-12T21:18:30",
+      "balance": 9778.879959681275
+    },
+    {
+      "timestamp": "2025-06-12T21:18:30",
+      "balance": 9813.268191513058
+    }
+  ]
+}
