@@ -142,11 +142,13 @@ class BacktestResults:
         self.largest_win = max(winning_pnls) if winning_pnls else 0
         self.largest_loss = min(losing_pnls) if losing_pnls else 0
         
-        # Hold time
-        hold_times = [t.hold_time for t in self.trades if t.hold_time]
+        # Hold time - FIX HERE
+        hold_times = [t.hold_time for t in self.trades if t.hold_time is not None]
         if hold_times:
             avg_seconds = sum(ht.total_seconds() for ht in hold_times) / len(hold_times)
             self.avg_hold_time = timedelta(seconds=avg_seconds)
+        else:
+            self.avg_hold_time = None  # Keep as None if no hold times
         
         # Drawdown calculation
         self._calculate_drawdown()

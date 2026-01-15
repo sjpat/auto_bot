@@ -45,7 +45,7 @@ async def main():
     # Convert to HistoricalPricePoint objects
     historical_data = {}
     for market_id, points in raw_data.items():
-        if len(points) >= 20:  # Need at least 20 points
+        if len(points) >= 4:  # Need at least 20 points
             historical_data[market_id] = [
                 HistoricalPricePoint(
                     timestamp=datetime.fromisoformat(p['timestamp']),
