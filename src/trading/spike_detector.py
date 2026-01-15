@@ -16,6 +16,9 @@ class Spike:
     previous_price: float
     change_pct: float
     timestamp: datetime
+    price_change: float
+    mean_price: float
+    std_dev: float
     # confidence: Optional[float]  # 0.0-1.0
 
 class SpikeDetector:
@@ -84,6 +87,9 @@ class SpikeDetector:
                         current_price=current_price,
                         previous_price=mean_price,
                         change_pct=change_pct,
+                        price_change=current_price - mean_price,
+                        mean_price=mean_price,
+                        std_dev=self._calculate_volatility(market_id),
                         direction='buy' if change_pct > 0 else 'sell',
                         timestamp=datetime.now()
                     )
