@@ -151,7 +151,7 @@ class TestEndToEnd:
         print(f"\n📉 Price reverts to ${exit_price:.4f}")
         
         # Check if we should take profit
-        current_pnl = position.calculate_pnl(exit_price)
+        current_pnl = position_manager.calculate_pnl(position,exit_price)
         print(f"   Current P&L: ${current_pnl:.2f}")
         
         exit_eval = position_manager.evaluate_position_for_exit(
@@ -228,14 +228,17 @@ class TestEndToEnd:
         adverse_price = 0.48  # Loss of $0.03 per contract = $3 total
         print(f"\n📈 Price moves against us: ${adverse_price:.4f}")
         
-        current_pnl = position.calculate_pnl(adverse_price)
+        current_pnl = position_manager.calculate_pnl(position, adverse_price)
         print(f"   Current P&L: ${current_pnl:.2f}")
         
         # Check if stop loss should trigger
-        should_exit, reason = position_manager.should_close_position(
-            position.position_id,
+        exit_eval = position_manager.evaluate_position_for_exit(
+            order_id,
             adverse_price
         )
+        
+        should_exit = exit_eval.get('should_exit', False)
+        reason = exit_eval.get('reason', 'unknown')
         
         assert should_exit, "Stop loss should trigger"
         assert "stop loss" in reason.lower(), f"Should be stop loss exit: {reason}"
@@ -290,14 +293,14 @@ class TestEndToEnd:
             # Close at loss
             loss = -5.0  # $5 loss each
             final_pnl = position_manager.close_position(
-                position.position_id,
+                position['id'],
                 exit_price=0.55  # Adverse move
             )
             
-            total_loss += final_pnl
-            trades.append((position.position_id, final_pnl))
+            total_loss += final_pnl.get('net_pnl', final_pnl.get('pnl', 0))
+            trades.append((position['id'], final_pnl))
             
-            print(f"   Trade {i+1}: ${final_pnl:.2f} | Total: ${total_loss:.2f}")
+            print(f"   Trade {i+1}: ${final_pnl.get('net_pnl', final_pnl.get('pnl', 0)):.2f} | Total: ${total_loss:.2f}")
         
         print(f"\n💸 Total losses: ${total_loss:.2f}")
         print(f"   Daily limit: ${config.DAILY_LOSS_LIMIT_USD:.2f}")
