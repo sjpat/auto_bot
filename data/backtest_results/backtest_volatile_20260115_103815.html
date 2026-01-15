@@ -1,0 +1,685 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backtest Report - 2024-11-05 to 2025-06-12</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .metric-card {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+        .positive { color: #4CAF50; }
+        .negative { color: #f44336; }
+        .chart-container {
+            margin: 30px 0;
+            position: relative;
+            height: 400px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Backtest Results Report</h1>
+        <p><strong>Period:</strong> 2024-11-05 to 2025-06-12</p>
+        <p><strong>Strategy:</strong> Spike Trading (Threshold: 4.0%)</p>
+        
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total Return</div>
+                <div class="metric-value negative">-7.32%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Final Balance</div>
+                <div class="metric-value">$9,268.30</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value">0.0%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Trades</div>
+                <div class="metric-value">67</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Profit Factor</div>
+                <div class="metric-value">0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Max Drawdown</div>
+                <div class="metric-value negative">10.3%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Sharpe Ratio</div>
+                <div class="metric-value">-3.27</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Avg Hold Time</div>
+                <div class="metric-value">245.2h</div>
+            </div>
+        </div>
+        
+        <h2>📈 Equity Curve</h2>
+        <div class="chart-container">
+            anvas id="equityChart"></canvas>
+        </div>
+        
+        <h2>📋 Recent Trades</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Market</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>P&L</th>
+                    <th>Return</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>18</td>
+                    <td>PRES2024-TRUMP...</td>
+                    <td>11/05 22:44</td>
+                    <td>11/05 22:49</td>
+                    <td class="negative">$-13.81</td>
+                    <td class="negative">-14.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>20</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 14:50</td>
+                    <td>12/18 14:51</td>
+                    <td class="negative">$-6.55</td>
+                    <td class="negative">-8.2%</td>
+                    <td>take_profit</td>
+                </tr>
+
+                <tr>
+                    <td>21</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 14:51</td>
+                    <td>12/18 14:58</td>
+                    <td class="negative">$-11.72</td>
+                    <td class="negative">-13.8%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>22</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 14:58</td>
+                    <td>12/18 15:04</td>
+                    <td class="negative">$-10.83</td>
+                    <td class="negative">-12.7%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>23</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:04</td>
+                    <td>12/18 15:10</td>
+                    <td class="negative">$-13.62</td>
+                    <td class="negative">-15.8%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>24</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:10</td>
+                    <td>12/18 15:16</td>
+                    <td class="negative">$-9.70</td>
+                    <td class="negative">-11.4%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>25</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:16</td>
+                    <td>12/18 15:22</td>
+                    <td class="negative">$-14.98</td>
+                    <td class="negative">-17.2%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>26</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:22</td>
+                    <td>12/18 15:28</td>
+                    <td class="negative">$-11.21</td>
+                    <td class="negative">-13.3%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>27</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:28</td>
+                    <td>12/18 15:34</td>
+                    <td class="negative">$-9.29</td>
+                    <td class="negative">-11.0%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>28</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:34</td>
+                    <td>12/18 15:40</td>
+                    <td class="negative">$-12.29</td>
+                    <td class="negative">-14.1%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>29</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:40</td>
+                    <td>12/18 15:46</td>
+                    <td class="negative">$-14.51</td>
+                    <td class="negative">-16.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>31</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:34</td>
+                    <td>01/12 19:40</td>
+                    <td class="negative">$-11.92</td>
+                    <td class="negative">-18.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>32</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:40</td>
+                    <td>01/12 19:42</td>
+                    <td class="negative">$-3.04</td>
+                    <td class="negative">-5.0%</td>
+                    <td>take_profit</td>
+                </tr>
+
+                <tr>
+                    <td>33</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:42</td>
+                    <td>01/12 19:44</td>
+                    <td class="negative">$-12.76</td>
+                    <td class="negative">-19.1%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>34</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:44</td>
+                    <td>01/12 19:50</td>
+                    <td class="negative">$-7.68</td>
+                    <td class="negative">-12.2%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>35</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:50</td>
+                    <td>01/12 19:56</td>
+                    <td class="negative">$-11.55</td>
+                    <td class="negative">-18.0%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>36</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 19:56</td>
+                    <td>01/12 20:00</td>
+                    <td class="negative">$-5.56</td>
+                    <td class="negative">-9.0%</td>
+                    <td>take_profit</td>
+                </tr>
+
+                <tr>
+                    <td>37</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:00</td>
+                    <td>01/12 20:04</td>
+                    <td class="negative">$-13.57</td>
+                    <td class="negative">-20.9%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>38</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:04</td>
+                    <td>01/12 20:10</td>
+                    <td class="negative">$-3.02</td>
+                    <td class="negative">-5.0%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>39</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:10</td>
+                    <td>01/12 20:12</td>
+                    <td class="negative">$-13.34</td>
+                    <td class="negative">-20.3%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>40</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:12</td>
+                    <td>01/12 20:14</td>
+                    <td class="negative">$-5.40</td>
+                    <td class="negative">-8.8%</td>
+                    <td>take_profit</td>
+                </tr>
+
+                <tr>
+                    <td>41</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:14</td>
+                    <td>01/12 20:16</td>
+                    <td class="negative">$-13.37</td>
+                    <td class="negative">-20.7%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>42</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:18</td>
+                    <td>01/12 20:20</td>
+                    <td class="negative">$-13.85</td>
+                    <td class="negative">-21.3%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>43</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:22</td>
+                    <td>01/12 20:24</td>
+                    <td class="negative">$-13.13</td>
+                    <td class="negative">-20.6%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>44</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:28</td>
+                    <td>01/12 20:30</td>
+                    <td class="negative">$-14.67</td>
+                    <td class="negative">-22.0%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>46</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 16:49</td>
+                    <td>01/25 16:56</td>
+                    <td class="negative">$-9.28</td>
+                    <td class="negative">-13.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>47</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 16:56</td>
+                    <td>01/25 17:01</td>
+                    <td class="negative">$-7.63</td>
+                    <td class="negative">-11.2%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>48</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:01</td>
+                    <td>01/25 17:06</td>
+                    <td class="negative">$-9.44</td>
+                    <td class="negative">-13.4%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>49</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:06</td>
+                    <td>01/25 17:11</td>
+                    <td class="negative">$-11.72</td>
+                    <td class="negative">-16.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>50</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:11</td>
+                    <td>01/25 17:16</td>
+                    <td class="negative">$-7.71</td>
+                    <td class="negative">-11.2%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>51</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:16</td>
+                    <td>01/25 17:21</td>
+                    <td class="negative">$-11.42</td>
+                    <td class="negative">-16.1%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>52</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:21</td>
+                    <td>01/25 17:26</td>
+                    <td class="negative">$-10.10</td>
+                    <td class="negative">-14.6%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>53</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:26</td>
+                    <td>01/25 17:31</td>
+                    <td class="negative">$-8.28</td>
+                    <td class="negative">-12.0%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>54</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:31</td>
+                    <td>01/25 17:36</td>
+                    <td class="negative">$-10.13</td>
+                    <td class="negative">-14.4%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>56</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:41</td>
+                    <td>06/12 20:43</td>
+                    <td class="negative">$-16.03</td>
+                    <td class="negative">-23.6%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>57</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:43</td>
+                    <td>06/12 20:44</td>
+                    <td class="negative">$-15.05</td>
+                    <td class="negative">-24.7%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>58</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:44</td>
+                    <td>06/12 20:46</td>
+                    <td class="negative">$-13.14</td>
+                    <td class="negative">-24.3%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>59</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:46</td>
+                    <td>06/12 20:47</td>
+                    <td class="negative">$-12.30</td>
+                    <td class="negative">-25.6%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>60</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:47</td>
+                    <td>06/12 20:49</td>
+                    <td class="negative">$-9.60</td>
+                    <td class="negative">-22.9%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>61</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:49</td>
+                    <td>06/12 20:54</td>
+                    <td class="negative">$-2.61</td>
+                    <td class="negative">-6.9%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>62</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:54</td>
+                    <td>06/12 20:56</td>
+                    <td class="negative">$-9.39</td>
+                    <td class="negative">-22.9%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>63</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 20:56</td>
+                    <td>06/12 21:02</td>
+                    <td class="negative">$-2.86</td>
+                    <td class="negative">-7.7%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>64</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 21:02</td>
+                    <td>06/12 21:08</td>
+                    <td class="negative">$-7.39</td>
+                    <td class="negative">-18.7%</td>
+                    <td>max_hold_time</td>
+                </tr>
+
+                <tr>
+                    <td>65</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 21:08</td>
+                    <td>06/12 21:12</td>
+                    <td class="negative">$-3.48</td>
+                    <td class="negative">-9.3%</td>
+                    <td>take_profit</td>
+                </tr>
+
+                <tr>
+                    <td>66</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 21:12</td>
+                    <td>06/12 21:14</td>
+                    <td class="negative">$-8.33</td>
+                    <td class="negative">-21.2%</td>
+                    <td>stop_loss</td>
+                </tr>
+
+                <tr>
+                    <td>19</td>
+                    <td>PRES2024-TRUMP...</td>
+                    <td>11/05 22:49</td>
+                    <td>06/12 21:18</td>
+                    <td class="negative">$-13.20</td>
+                    <td class="negative">-14.0%</td>
+                    <td>backtest_end</td>
+                </tr>
+
+                <tr>
+                    <td>30</td>
+                    <td>FED-RATE-DEC24...</td>
+                    <td>12/18 15:46</td>
+                    <td>06/12 21:18</td>
+                    <td class="negative">$-11.89</td>
+                    <td class="negative">-14.0%</td>
+                    <td>backtest_end</td>
+                </tr>
+
+                <tr>
+                    <td>45</td>
+                    <td>NFL-PLAYOFF-KC...</td>
+                    <td>01/12 20:30</td>
+                    <td>06/12 21:18</td>
+                    <td class="negative">$-8.54</td>
+                    <td class="negative">-14.0%</td>
+                    <td>backtest_end</td>
+                </tr>
+
+                <tr>
+                    <td>55</td>
+                    <td>TECH-EARNINGS...</td>
+                    <td>01/25 17:36</td>
+                    <td>06/12 21:18</td>
+                    <td class="negative">$-9.80</td>
+                    <td class="negative">-14.0%</td>
+                    <td>backtest_end</td>
+                </tr>
+
+                <tr>
+                    <td>67</td>
+                    <td>NBA-FINALS-G5...</td>
+                    <td>06/12 21:14</td>
+                    <td>06/12 21:18</td>
+                    <td class="negative">$-5.09</td>
+                    <td class="negative">-14.0%</td>
+                    <td>backtest_end</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        // Equity Curve Chart
+        const ctx = document.getElementById('equityChart').getContext('2d');
+        const equityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['11/05 20:00','11/05 20:00','11/05 21:24','11/05 21:29','11/05 21:34','11/05 21:39','11/05 21:44','11/05 21:49','11/05 21:54','11/05 21:59','11/05 22:04','11/05 22:09','11/05 22:14','11/05 22:19','11/05 22:24','11/05 22:29','11/05 22:34','11/05 22:39','11/05 22:44','11/05 22:49','12/18 14:51','12/18 14:58','12/18 15:04','12/18 15:10','12/18 15:16','12/18 15:22','12/18 15:28','12/18 15:34','12/18 15:40','12/18 15:46','01/12 19:24','01/12 19:40','01/12 19:42','01/12 19:44','01/12 19:50','01/12 19:56','01/12 20:00','01/12 20:04','01/12 20:10','01/12 20:12','01/12 20:14','01/12 20:16','01/12 20:20','01/12 20:24','01/12 20:30','01/25 16:56','01/25 17:01','01/25 17:06','01/25 17:11','01/25 17:16','01/25 17:21','01/25 17:26','01/25 17:31','01/25 17:36','06/12 20:43','06/12 20:44','06/12 20:46','06/12 20:47','06/12 20:49','06/12 20:54','06/12 20:56','06/12 20:56','06/12 21:02','06/12 21:08','06/12 21:12','06/12 21:14','06/12 21:18','06/12 21:18','06/12 21:18','06/12 21:18','06/12 21:18'],
+                datasets: [{
+                    label: 'Account Balance',
+                    data: [10000,10000,9987.971453369739,9974.45718108441,9961.103661403167,9947.38542423223,9934.684333686066,9921.084858700364,9906.92981803454,9893.779488487638,9880.972891249965,9867.847453178236,9855.03895746775,9840.85046275771,9827.409703779505,9814.122669294233,9800.09967603041,9788.025959640092,9774.069226452824,9760.263332757762,9652.840761893282,9641.124613875492,9630.296044105602,9616.676826029377,9606.978074967605,9591.998407719204,9580.786709558462,9571.4958016371,9559.20358309769,9544.696479729759,9453.83719725167,9441.914112029835,9438.874908501486,9426.115324358265,9418.431526617074,9406.882013645627,9401.325352373722,9387.757807390704,9384.739948260616,9371.39529248788,9365.990343231038,9352.61678375024,9338.76259686801,9325.634642123967,9310.96605616641,9236.43416550233,9228.800810223378,9219.364349565374,9207.64902044797,9199.934627524768,9188.514107728464,9178.41345607686,9170.128844923986,9160.000932473315,9069.079183418005,9054.029183418004,9040.889183418003,9028.589183418002,9018.989183418002,9016.376153718033,9006.989914344404,8967.42495944117,9004.13465323293,8996.742623789209,8993.264755482127,8984.933291957868,9033.729520658884,9112.700672719278,9169.414611294624,9234.507439912788,9268.29865256045],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
