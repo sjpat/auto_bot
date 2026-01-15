@@ -167,3 +167,114 @@ async def test_price_variation_across_markets(config):
         
     finally:
         await client.close()
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_close_timestamp_parsing(config):
+    """Test that close timestamps are parsed correctly from various formats."""
+    client = KalshiClient(config)
+    
+    try:
+        await client.authenticate()
+        markets = await client.get_markets(status="open", limit=30, min_volume=1)
+        
+        if len(markets) == 0:
+            pytest.skip("No markets available for testing")
+        
+        now = datetime.now().timestamp()
+        valid_timestamps = 0
+        invalid_timestamps = 0
+        
+        print(f"\n⏰ Timestamp validation:")
+        
+        for market in markets:
+            assert isinstance(market.close_ts, int), \
+                f"Market {market.market_id} has non-integer timestamp: {type(market.close_ts)}"
+            
+            one_year = 365 * 24 * 3600
+            if now - one_year < market.close_ts < now + one_year:
+                valid_timestamps += 1
+            else:
+                invalid_timestamps += 1
+                print(f"   ⚠️  {market.market_id}: timestamp out of range")
+        
+        print(f"   Valid: {valid_timestamps}/{len(markets)}")
+        
+        validity_ratio = valid_timestamps / len(markets)
+        assert validity_ratio >= 0.9, \
+            f"Too many invalid timestamps: {validity_ratio * 100:.0f}% valid"
+        
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_no_markets_skipped_due_to_parsing_errors(config):
+    """Verify that the fixed parsing logic doesn't skip markets unnecessarily."""
+    client = KalshiClient(config)
+    
+    try:
+        await client.authenticate()
+        
+        markets = await client.get_markets(
+            status="open",
+            limit=50,
+            min_volume=0,
+            filter_untradeable=False
+        )
+        
+        print(f"\n📈 Market retrieval efficiency:")
+        print(f"   Requested: 50")
+        print(f"   Received: {len(markets)}")
+        
+        assert len(markets) >= 20, \
+            f"Too few markets returned: {len(markets)}/50. Possible parsing issues."
+        
+        for market in markets:
+            assert market.market_id
+            assert market.title
+            assert market.close_ts > 0
+            assert 0 <= market.last_price_cents <= 10000
+        
+        print(f"   ✅ All {len(markets)} markets have valid data")
+        
+    finally:
+        await client.close()
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_price_conversion_accuracy(config):
+    """Verify that prices are converted correctly from Kalshi's format."""
+    client = KalshiClient(config)
+    
+    try:
+        await client.authenticate()
+        markets = await client.get_markets(status="open", limit=20, min_volume=1)
+        
+        if len(markets) == 0:
+            pytest.skip("No markets available for testing")
+        
+        print(f"\n💵 Price conversion check:")
+        
+        for market in markets[:5]:
+            # Verify price is in basis points (0-10000)
+            assert 0 <= market.last_price_cents <= 10000, \
+                f"Price out of range: {market.last_price_cents}"
+            
+            # Verify price property converts correctly to 0.00-1.00 range
+            price_float = market.price
+            assert 0.0 <= price_float <= 1.0, \
+                f"Float price out of range: {price_float}"
+            
+            # Verify conversion is correct (within 0.0001 tolerance)
+            expected_float = market.last_price_cents / 10000.0
+            assert abs(price_float - expected_float) < 0.0001, \
+                f"Price conversion error: {price_float} != {expected_float}"
+            
+            print(f"   ✅ {market.market_id}: {market.last_price_cents} → ${price_float:.4f}")
+        
+        print(f"   All {min(5, len(markets))} sample prices converted correctly")
+        
+    finally:
+        await client.close()
