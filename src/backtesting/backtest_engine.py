@@ -280,31 +280,38 @@ class BacktestEngine:
             return
         
         trade = self.positions[price_point.market_id]
-        current_price = price_point.price
+        current_price = price_point.price  # This is the current YES price
         
-        # Calculate current P&L
-        hold_time = timestamp - trade.entry_time
-        
+        # Calculate unrealized P&L correctly for each side
         if trade.entry_side == 'yes':
-            unrealized_pnl = (current_price - trade.entry_price) * trade.contracts
+            # YES position: profit when price goes up
+            entry_value = trade.contracts * trade.entry_price
+            current_value = trade.contracts * current_price
+            unrealized_pnl = current_value - entry_value
         else:  # 'no' side
-            unrealized_pnl = (trade.entry_price - current_price) * trade.contracts
+            # NO position: profit when YES price goes down
+            # NO was bought at (1 - entry_yes_price)
+            # NO current value is (1 - current_yes_price)
+            entry_value = trade.contracts * (1.0 - trade.entry_price)
+            current_value = trade.contracts * (1.0 - current_price)
+            unrealized_pnl = current_value - entry_value
         
-        pnl_pct = unrealized_pnl / trade.entry_cost if trade.entry_cost > 0 else 0
+        pnl_pct = unrealized_pnl / entry_value if entry_value > 0 else 0
         
         # Check exit conditions
         exit_reason = None
         
-        # Stop loss
+        # Stop loss (loss exceeds threshold)
         if pnl_pct <= -self.config.stop_loss_pct:
             exit_reason = "stop_loss"
         
-        # Take profit
+        # Take profit (profit exceeds threshold)
         elif pnl_pct >= self.config.take_profit_pct:
             exit_reason = "take_profit"
         
         # Max hold time
-        elif hold_time >= self.config.max_hold_time:
+        hold_time = timestamp - trade.entry_time
+        if hold_time >= self.config.max_hold_time:
             exit_reason = "max_hold_time"
         
         # Execute exit if triggered
@@ -312,9 +319,10 @@ class BacktestEngine:
             await self._close_position(
                 timestamp=timestamp,
                 market_id=price_point.market_id,
-                exit_price=current_price,
+                exit_price=current_price,  # Pass YES price
                 exit_reason=exit_reason
             )
+
     
     async def _close_position(
         self,
