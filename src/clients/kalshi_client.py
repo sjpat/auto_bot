@@ -429,8 +429,8 @@ class KalshiClient:
         self,
         status: str = "open",
         limit: int = 1000,
-        min_volume: int = 0,  # Add this parameter
-        filter_untradeable: bool = True  # Add this parameter
+        min_volume: int = 0,
+        filter_untradeable: bool = True
     ) -> List[Market]:
         """
         Get available markets.
@@ -445,7 +445,6 @@ class KalshiClient:
             List of Market objects
         """
         start_time = time.time()
-
         self.logger.info(
             f"Fetching markets: status={status}, limit={limit}, "
             f"min_volume={min_volume}, filter_untradeable={filter_untradeable}"
@@ -458,16 +457,38 @@ class KalshiClient:
         
         markets = response.get("markets", [])
         market_objects = []
+        parse_errors = []
         
         for m in markets:
             try:
-                # Parse ISO timestamp to Unix timestamp
-                close_time_str = m.get("close_time") or m.get("close_ts")
-                if isinstance(close_time_str, str):
-                    close_dt = datetime.fromisoformat(close_time_str.replace('Z', '+00:00'))
-                    close_ts = int(close_dt.timestamp())
-                else:
-                    close_ts = int(close_time_str)
+                # ✅ FIXED: Robust timestamp parsing with better error handling
+                close_time_str = m.get("close_time") or m.get("close_ts") or m.get("expiration_time")
+                
+                if close_time_str is None:
+                    self.logger.warning(f"Market {m.get('ticker', 'Unknown')} missing close_time field, skipping")
+                    parse_errors.append(f"{m.get('ticker')}: missing close_time")
+                    continue
+                
+                # Parse the timestamp
+                try:
+                    if isinstance(close_time_str, (int, float)):
+                        # Already a timestamp
+                        close_ts = int(close_time_str)
+                    elif isinstance(close_time_str, str):
+                        # Parse ISO format string
+                        # Handle both 'Z' and '+00:00' timezone formats
+                        clean_time_str = close_time_str.replace('Z', '+00:00')
+                        close_dt = datetime.fromisoformat(clean_time_str)
+                        close_ts = int(close_dt.timestamp())
+                    else:
+                        raise ValueError(f"Unexpected close_time type: {type(close_time_str)}")
+                except (ValueError, AttributeError) as e:
+                    self.logger.warning(
+                        f"Failed to parse close_time for {m.get('ticker')}: "
+                        f"'{close_time_str}' - {e}"
+                    )
+                    parse_errors.append(f"{m.get('ticker')}: invalid timestamp format")
+                    continue
                 
                 # Get prices - Kalshi returns cents (0-100), convert to basis points (0-10000)
                 last_price = m.get("last_price", 0)
@@ -479,6 +500,14 @@ class KalshiClient:
                 last_price_cents = last_price * 100 if last_price > 0 else 5000  # Default to 50 cents
                 yes_bid_cents = yes_bid * 100
                 yes_ask_cents = yes_ask * 100
+                
+                # ✅ ADDED: Validate price ranges to catch bad data
+                if not (0 <= last_price_cents <= 10000):
+                    self.logger.warning(
+                        f"Market {m.get('ticker')} has invalid price: {last_price_cents}, skipping"
+                    )
+                    parse_errors.append(f"{m.get('ticker')}: price out of range")
+                    continue
                 
                 # Filter untradeable markets if requested
                 if filter_untradeable:
@@ -505,9 +534,12 @@ class KalshiClient:
                 # Stop if we have enough markets
                 if len(market_objects) >= limit:
                     break
-                    
-            except (KeyError, ValueError) as e:
-                self.logger.warning(f"Failed to parse market {m.get('ticker', 'Unknown')}: {e}")
+            
+            except (KeyError, ValueError, TypeError) as e:
+                error_msg = f"Failed to parse market {m.get('ticker', 'Unknown')}: {e}"
+                self.logger.warning(error_msg)
+                parse_errors.append(f"{m.get('ticker', 'Unknown')}: {str(e)}")
+                continue
         
         # Log the results
         elapsed = time.time() - start_time
@@ -517,6 +549,13 @@ class KalshiClient:
             f"(filtered from {len(markets)} raw) in {elapsed:.2f}s"
         )
         
+        if parse_errors:
+            self.logger.warning(f"Parse errors for {len(parse_errors)} markets:")
+            for error in parse_errors[:10]:  # Show first 10 errors
+                self.logger.warning(f"  - {error}")
+            if len(parse_errors) > 10:
+                self.logger.warning(f"  ... and {len(parse_errors) - 10} more")
+        
         if filter_untradeable:
             self.logger.debug(
                 f"Filtering stats: "
@@ -525,7 +564,6 @@ class KalshiClient:
             )
         
         return market_objects
-
     
     async def create_order(
         self,

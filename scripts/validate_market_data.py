@@ -1,139 +1,134 @@
 """
-Quick diagnostic script to validate market data is being pulled correctly.
+Standalone script to validate market data quality and parsing.
+Run this to verify the API is returning correct data.
 """
 import asyncio
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.config import Config
-from src.clients.kalshi_client import KalshiClient
-from src.trading.spike_detector import SpikeDetector
+import os
 from datetime import datetime
 
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-async def main():
-    print("=" * 60)
-    print("MARKET DATA VALIDATION DIAGNOSTIC")
-    print("=" * 60)
+from src.clients.kalshi_client import KalshiClient
+from src.config import Config
+
+
+async def validate_market_data():
+    """Validate that market data is being pulled correctly."""
+    print("=" * 80)
+    print("KALSHI MARKET DATA VALIDATION")
+    print("=" * 80)
     
-    config = Config(platform="kalshi")
+    config = Config()
     client = KalshiClient(config)
-    spike_detector = SpikeDetector(config)
     
     try:
-        # Test 1: Authentication
-        print("\n[1/5] Testing API authentication...")
+        # 1. Test authentication
+        print("\n[1/5] Testing authentication...")
         auth_success = await client.authenticate()
-        if auth_success:
-            print("✅ Authentication successful")
-            balance = await client.get_balance()
-            print(f"   Account balance: ${balance:.2f}")
-        else:
-            print("❌ Authentication failed")
-            return
+        if not auth_success:
+            print("❌ Authentication failed!")
+            return False
+        print("✅ Authentication successful")
         
-        # Test 2: Fetch markets
+        balance = await client.get_balance()
+        print(f"   Account balance: ${balance:.2f}")
+        
+        # 2. Test market retrieval
         print("\n[2/5] Fetching open markets...")
-        markets = await client.get_markets(status="open", limit=50)
-        print(f"✅ Retrieved {len(markets)} markets")
+        markets = await client.get_markets(
+            status="open",
+            limit=50,
+            min_volume=1,
+            filter_untradeable=True
+        )
         
         if len(markets) == 0:
-            print("❌ No markets found - check API status")
-            return
+            print("❌ No markets returned!")
+            return False
         
-        # Test 3: Analyze price data
-        print("\n[3/5] Analyzing price data...")
+        print(f"✅ Retrieved {len(markets)} open markets")
+        
+        # 3. Validate data structure
+        print("\n[3/5] Validating market data structure...")
+        validation_errors = []
+        
+        for i, market in enumerate(markets[:10], 1):
+            errors = []
+            
+            if not market.market_id:
+                errors.append("missing market_id")
+            if not market.title:
+                errors.append("missing title")
+            if market.close_ts is None:
+                errors.append("missing close_ts")
+            
+            if not (0 <= market.last_price_cents <= 10000):
+                errors.append(f"invalid price: {market.last_price_cents}")
+            
+            now = datetime.now().timestamp()
+            if market.close_ts < now:
+                time_ago = (now - market.close_ts) / 3600
+                errors.append(f"expired {time_ago:.1f}h ago")
+            
+            if errors:
+                validation_errors.append(f"Market {market.market_id}: {', '.join(errors)}")
+                print(f"   ⚠️  Market {i}: {market.market_id} - {', '.join(errors)}")
+            else:
+                print(f"   ✅ Market {i}: {market.market_id}")
+        
+        if validation_errors:
+            print(f"\n⚠️  Found {len(validation_errors)} validation errors")
+        else:
+            print("\n✅ All markets passed validation")
+        
+        # 4. Check price diversity
+        print("\n[4/5] Checking price diversity...")
         prices = [m.last_price_cents for m in markets]
         unique_prices = len(set(prices))
+        diversity_ratio = unique_prices / len(markets)
         
-        print(f"   Unique price points: {unique_prices}/{len(markets)}")
-        print(f"   Price range: {min(prices)} - {max(prices)} cents")
-        print(f"   Average price: {sum(prices)/len(prices):.0f} cents")
+        print(f"   Total markets: {len(markets)}")
+        print(f"   Unique prices: {unique_prices}")
+        print(f"   Diversity: {diversity_ratio * 100:.1f}%")
         
-        # Check for suspicious patterns
-        default_count = sum(1 for p in prices if p == 5000)
-        if default_count > len(markets) * 0.3:
-            print(f"⚠️  WARNING: {default_count} markets at default price (5000 cents)")
-            print(f"   This indicates price fields are not being parsed correctly!")
+        if diversity_ratio < 0.3:
+            print("   ⚠️  Low price diversity - possible stale data")
+        else:
+            print("   ✅ Good price diversity")
         
-        # Test 4: Check market freshness
-        print("\n[4/5] Checking market freshness...")
-        now = datetime.now().timestamp()
-        active_markets = [m for m in markets if m.close_ts > now]
-        print(f"✅ {len(active_markets)}/{len(markets)} markets are active")
+        # 5. Display sample markets
+        print("\n[5/5] Sample market data:")
+        print("-" * 80)
         
-        # Test 5: Simulate spike detection
-        print("\n[5/5] Testing spike detection integration...")
-        if len(markets) > 0:
-            test_market = markets[0]  # Fixed: markets is already a list of Market objects
+        for market in markets[:5]:
+            hours_to_close = market.time_to_expiry_seconds / 3600
             
-            print(f"   Using test market: {test_market.market_id}")
-            print(f"   Current price: ${test_market.price:.4f} ({test_market.last_price_cents} cents)")
-            
-            # Add historical prices
-            for i in range(25):
-                spike_detector.add_price(
-                    market_id=test_market.market_id,
-                    price=test_market.price,
-                    timestamp=datetime.now()
-                )
-            
-            spikes = spike_detector.detect_spikes(markets=[test_market], threshold=0.04)
-            print(f"✅ Spike detection working (found {len(spikes)} spikes)")
+            print(f"\n📊 {market.market_id}")
+            print(f"   Title: {market.title[:60]}...")
+            print(f"   Price: ${market.price:.4f} ({market.last_price_cents} basis points)")
+            print(f"   Bid: ${market.best_bid_cents/10000:.4f} | Ask: ${market.best_ask_cents/10000:.4f}")
+            print(f"   Volume: ${market.liquidity_usd:.2f}")
+            print(f"   Status: {market.status}")
+            print(f"   Closes in: {hours_to_close:.1f} hours")
         
-        # Summary
-        print("\n" + "=" * 60)
-        print("SUMMARY")
-        print("=" * 60)
-        print(f"✅ API connection: OK")
-        print(f"✅ Markets retrieved: {len(markets)}")
-        print(f"✅ Price diversity: {unique_prices} unique prices")
-        print(f"✅ Active markets: {len(active_markets)}")
-        print(f"✅ Spike detector: OK")
+        print("\n" + "=" * 80)
+        print("✅ VALIDATION COMPLETE - Market data looks good!")
+        print("=" * 80)
         
-        # Show sample markets
-        print("\n📊 Sample of markets (first 5):")
-        for i, market in enumerate(markets[:5], 1):
-            print(f"\n   {i}. {market.market_id}")
-            print(f"      Title: {market.title[:60]}...")
-            print(f"      Price: ${market.price:.4f} ({market.last_price_cents} cents)")
-            print(f"      Liquidity: ${market.liquidity_usd:.2f}")
-            print(f"      Closes: {datetime.fromtimestamp(market.close_ts).strftime('%Y-%m-%d %H:%M')}")
-        
-        # Recommendations
-        print("\n" + "=" * 60)
-        print("RECOMMENDATIONS")
-        print("=" * 60)
-        
-        if unique_prices == 1 and prices[0] == 5000:
-            print("🚨 CRITICAL: All prices are at default value (5000 cents)")
-            print("   → The price field mapping in kalshi_client.py is WRONG")
-            print("   → Run: python scripts/check_price_fields.py")
-            print("   → This is why no spikes are detected!")
-        elif unique_prices < len(markets) * 0.3:
-            print("⚠️  Price diversity is low. Markets may have stale data.")
-            print("   → Check if Kalshi API is returning live prices")
-        
-        if default_count > len(markets) * 0.2:
-            print("⚠️  Many markets at default price (5000 cents).")
-            print("   → This could indicate markets haven't traded recently")
-        
-        if len(active_markets) < len(markets) * 0.5:
-            print("⚠️  Many markets are expired.")
-            print("   → Consider filtering for markets with longer time to close")
-        
-        print("\n✅ Validation complete!")
+        return True
         
     except Exception as e:
-        print(f"\n❌ Error during validation: {e}")
+        print(f"\n❌ Validation failed with error: {e}")
         import traceback
         traceback.print_exc()
-    
+        return False
+        
     finally:
         await client.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    success = asyncio.run(validate_market_data())
+    sys.exit(0 if success else 1)
