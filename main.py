@@ -149,10 +149,10 @@ class TradingBot:
                 self.logger.error(f"Price update error: {e}", exc_info=True)
                 await asyncio.sleep(5)
     
-    async def get_tradeable_markets(self):
+    async def get_tradeable_markets(self, status, filter_untradeable: bool = True):
         """Get all open markets from Kalshi."""
         try:
-            markets = await self.client.get_markets(status="open")
+            markets = await self.client.get_markets(status=status, filter_untradeable=filter_untradeable)
             
             self.logger.info(f"Found {len(markets)} open markets")
             return markets  # Return ALL markets, filter for trading later
