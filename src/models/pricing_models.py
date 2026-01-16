@@ -91,7 +91,7 @@ class PricingModels:
         Returns:
             FairValue if near expiration with clear outcome
         """
-        time_to_expiry_hours = market_data.get('time_to_expiry_seconds', float('inf')) / 3600
+        time_to_expiry_hours = market_data.get('time_to_close_seconds', float('inf')) / 3600
         current_price = market_data.get('current_price', 0.5)
         
         # Only applicable within 6 hours of expiration
