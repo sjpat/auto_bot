@@ -22,7 +22,7 @@ MANIFEST
 .venv
 venv/
 ENV/
-.env
+.env*
 
 # Logs
 *.log

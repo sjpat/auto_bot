@@ -16,9 +16,9 @@ class Spike:
     previous_price: float
     change_pct: float
     timestamp: datetime
-    price_change: float
-    mean_price: float
-    std_dev: float
+    price_change: Optional[float] = None
+    mean_price: Optional[float] = None
+    std_dev: Optional[float] = None
     # confidence: Optional[float]  # 0.0-1.0
 
 class SpikeDetector:
