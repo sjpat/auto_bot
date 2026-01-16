@@ -61,7 +61,9 @@ class Config:
     MIN_LIQUIDITY_REQUIREMENT: float = float(
         os.getenv("MIN_LIQUIDITY_REQUIREMENT", "200.0")
     )
-    
+    # Mispricing Strategy Parameters
+    MIN_EDGE = float(os.getenv("MIN_EDGE", "0.08"))  # 8
+
     # ===== Fee-Aware Parameters (Kalshi) =====
     TARGET_PROFIT_USD: float = float(os.getenv("TARGET_PROFIT_USD", "2.00"))
     TARGET_LOSS_USD: float = float(os.getenv("TARGET_LOSS_USD", "-1.5"))
