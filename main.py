@@ -11,7 +11,7 @@ from src.config import Config
 from src.logger import setup_logger
 # from src.clients.polymarket_client import PolymarketClient
 from src.clients.kalshi_client import KalshiClient
-from src.trading.spike_detector import SpikeDetector
+from src.strategies.strategy_manager import StrategyManager
 from src.trading.order_executor import OrderExecutor
 from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
@@ -72,7 +72,7 @@ class TradingBot:
             self.fee_calculator = None  # Placeholder for other platforms
 
         # Initialize trading components (platform-agnostic)
-        self.spike_detector = SpikeDetector(config=self.config)
+        self.strategy_manager = StrategyManager(config=self.config)
         self.order_executor = OrderExecutor(
             client=self.client,
             config=self.config
@@ -135,14 +135,7 @@ class TradingBot:
                 
                 # Update price history
                 for market in markets:
-                    market_id = market.market_id if hasattr(market, 'market_id') else market.id
-                    price = market.price if hasattr(market, 'price') else market.current_price
-                    
-                    self.spike_detector.add_price(
-                        market_id=market_id,
-                        price=price,
-                        timestamp=datetime.now()
-                    )
+                    self.strategy_manager.on_market_update(market)
                 
                 self.logger.debug(f"Updated {len(markets)} markets")
                 await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
@@ -195,27 +188,19 @@ class TradingBot:
                 
                 # Detect spikes on top markets (limit to top 20 to save processing)
                 top_markets = ranked_markets[:20]
-                spikes = self.spike_detector.detect_spikes(
-                    markets=top_markets,
-                    threshold=self.config.SPIKE_THRESHOLD
-                )
-                
-                if spikes:
-                    self.logger.info(f"🔔 Detected {len(spikes)} spike(s)!")
+                signals = self.strategy_manager.generate_entry_signals(top_markets)
+
+                if signals:
+                    self.logger.info(f"🔔 Detected {len(signals)} opportunity(ies)!")
                     
-                    for spike in spikes:
-                        # Get full market object
-                        market = next(
-                            (m for m in top_markets if m.market_id == spike.market_id),
-                            None
-                        )
-                        
+                    for signal in signals:
+                        market = next((m for m in top_markets if m.market_id == signal.market_id), None)
                         if not market:
                             continue
                         
-                        # Enhanced pre-trade validation
-                        if await self.should_trade_spike(market, spike):
-                            await self.execute_spike_trade(spike, market)
+                        # Risk check
+                        if await self.should_trade_signal(market, signal):
+                            await self.execute_signal_trade(signal, market)
                 else:
                     self.logger.debug(
                         f"No spikes detected in {len(top_markets)} top markets "
