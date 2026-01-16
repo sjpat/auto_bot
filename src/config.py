@@ -49,7 +49,16 @@ class Config:
         "USDC_CONTRACT_ADDRESS",
         "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
     )
-    
+    # ===== Mispricing Strategy Parameters =====
+    MIN_EDGE: float = float(os.getenv("MIN_EDGE", "0.08"))
+    MIN_CONFIDENCE_MISPRICING: float = float(os.getenv("MIN_CONFIDENCE_MISPRICING", "0.60"))
+    MISPRICING_MAX_HOLDING_TIME: int = int(os.getenv("MISPRICING_MAX_HOLDING_TIME", "14400"))  # 4 hours
+    MISPRICING_HISTORY_SIZE: int = int(os.getenv("MISPRICING_HISTORY_SIZE", "50"))
+
+    # ===== Strategy Selection =====
+    ENABLE_SPIKE_STRATEGY: bool = os.getenv("ENABLE_SPIKE_STRATEGY", "true").lower() == "true"
+    ENABLE_MISPRICING_STRATEGY: bool = os.getenv("ENABLE_MISPRICING_STRATEGY", "true").lower() == "true"
+
     # ===== Trading Parameters =====
     TRADE_UNIT: int = int(os.getenv("TRADE_UNIT", "50.0"))
     SPIKE_THRESHOLD: float = float(os.getenv("SPIKE_THRESHOLD", "0.04"))
@@ -61,8 +70,6 @@ class Config:
     MIN_LIQUIDITY_REQUIREMENT: float = float(
         os.getenv("MIN_LIQUIDITY_REQUIREMENT", "200.0")
     )
-    # Mispricing Strategy Parameters
-    MIN_EDGE = float(os.getenv("MIN_EDGE", "0.08"))  # 8
 
     # ===== Fee-Aware Parameters (Kalshi) =====
     TARGET_PROFIT_USD: float = float(os.getenv("TARGET_PROFIT_USD", "2.00"))

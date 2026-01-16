@@ -14,6 +14,7 @@ from src.config import Config
 from src.clients.kalshi_client import KalshiClient
 from src.trading.spike_detector import SpikeDetector
 from src.trading.market_filter import MarketFilter
+from src.strategies.strategy_manager import StrategyManager
 
 
 class BotMonitor:
@@ -22,7 +23,7 @@ class BotMonitor:
     def __init__(self):
         self.config = Config()
         self.client = KalshiClient(self.config)
-        self.spike_detector = SpikeDetector(self.config)
+        self.strategy_manager = StrategyManager(self.config)
         self.market_filter = MarketFilter(self.config)
         
         self.stats = {
@@ -70,33 +71,42 @@ class BotMonitor:
                     datetime.now()
                 )
             
-            # 5. Detect spikes
-            print(f"\n🔍 Detecting spikes...")
-            spikes = self.spike_detector.detect_spikes(
-                markets=tradeable[:10],
-                threshold=self.config.SPIKE_THRESHOLD
-            )
-            
-            if spikes:
-                self.stats['spikes_detected'] += len(spikes)
+            print(f"\n🔍 Detecting opportunities (All Strategies)...")
+            signals = self.strategy_manager.generate_entry_signals(tradeable[:20])
+
+            if signals:
+                self.stats['spikes_detected'] += len(signals)  # Rename this to opportunities_detected
                 self.stats['last_spike_time'] = datetime.now()
-                print(f"   🔔 FOUND {len(spikes)} SPIKE(S)!")
+                print(f"   🔔 FOUND {len(signals)} OPPORTUNITY(IES)!")
                 
-                for spike in spikes:
+                for i, signal in enumerate(signals, 1):
                     market = next(
-                        (m for m in tradeable if m.market_id == spike.market_id),
+                        (m for m in tradeable if m.market_id == signal.market_id),
                         None
                     )
-                    print(f"\n   📊 Spike Details:")
-                    print(f"      Market: {spike.market_id}")
-                    print(f"      Change: {spike.change_pct:+.1%}")
-                    print(f"      Current: ${spike.current_price:.4f}")
-                    print(f"      Direction: {spike.direction}")
+                    strategy_name = signal.metadata.get('strategy', 'unknown')
+                    
+                    print(f"\n   --- Opportunity #{i} ---")
+                    print(f"   Strategy: {strategy_name.upper()}")
+                    print(f"   Market: {signal.market_id[:40]}...")
+                    print(f"   Direction: {signal.signal_type.value.upper()}")
+                    print(f"   Confidence: {signal.confidence:.1%}")
+                    
+                    if 'edge' in signal.metadata:
+                        print(f"   Edge: {signal.metadata['edge']:.1%}")
+                    if 'pricing_method' in signal.metadata:
+                        print(f"   Method: {signal.metadata['pricing_method']}")
+                    
                     if market:
-                        print(f"      Liquidity: ${market.liquidity_usd:.2f}")
-                        print(f"      Expires in: {market.time_to_expiry_seconds/3600:.1f}h")
+                        print(f"   Price: ${market.price:.4f}")
+                        print(f"   Liquidity: ${market.liquidity_usd:.2f}")
+                        print(f"   Expires: {market.time_to_expiry_seconds/3600:.1f}h")
             else:
-                print(f"   No spikes detected")
+                print(f"   No opportunities detected by any strategy")
+
+            # Update price history for all strategies:
+            for market in tradeable[:20]:
+                self.strategy_manager.on_market_update(market)  
             
             # 6. Show top opportunities
             print(f"\n🎯 Top Opportunities:")
