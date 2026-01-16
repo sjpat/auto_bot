@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidSignature
+from src.utils.decorators import async_retry
 
 
 logger = logging.getLogger(__name__)
@@ -238,6 +239,7 @@ class KalshiClient:
         
         self.last_api_call = datetime.now()
     
+    @async_retry(max_attempts=3, delay_seconds=60, backoff_multiplier=2)
     async def _request(
         self,
         method: str,
