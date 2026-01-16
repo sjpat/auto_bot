@@ -193,7 +193,7 @@ class MispricingStrategy(BaseStrategy):
         
         # Method 2: Time decay (near expiration)
         fair_value = self.pricing_models.time_decay_expiration({
-            'time_to_expiry_seconds': market.time_to_expiry_seconds,
+            'time_to_close_seconds': market.time_to_close_seconds,
             'current_price': market.yes_price
         })
         if fair_value:

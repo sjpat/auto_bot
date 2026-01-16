@@ -47,7 +47,7 @@ class TestMispricingStrategy:
         """Test detection of extreme prices near expiration."""
         # Market expiring in 1 hour, priced at 90%
         sample_market.close_time = datetime.now() + timedelta(hours=1)  # datetime
-        sample_market.yes_price = 0.90  # Use yes_price, not last_price_cents
+        sample_market.yes_price = 0.90  
         
         signals = strategy.generate_entry_signals([sample_market])
         
@@ -58,11 +58,11 @@ class TestMispricingStrategy:
         """Test mean reversion detection."""
         # Build price history
         for _ in range(30):
-            sample_market.last_price_cents = 5000  # 50% average
+            sample_market.yes_price = 0.50  # 50% average
             strategy.on_market_update(sample_market)
         
         # Sudden spike to 70%
-        sample_market.last_price_cents = 7000
+        sample_market.yes_price = 0.70
         strategy.on_market_update(sample_market)
         
         signals = strategy.generate_entry_signals([sample_market])
@@ -109,19 +109,25 @@ class TestMispricingStrategy:
     def test_exit_on_stop_loss(self, strategy, sample_market):
         """Test exit when stop loss is hit."""
         # Create losing position
+        entry_price = 0.55
+        quantity = 100
+        entry_cost = entry_price * quantity  
+        entry_fee = entry_cost * 0.01  
+
         position = Position(
             position_id="TEST-POS-002",
             market_id=sample_market.market_id,
-            side="buy",
-            quantity=100,
-            entry_price=0.55,
+            side=PositionSide.LONG, 
+            quantity=quantity,
+            entry_price=entry_price,
+            entry_cost=entry_cost,
+            entry_fee=entry_fee,  
             opened_at=datetime.now() - timedelta(minutes=10),
-            current_price=0.50,  # 5 cent loss
-            # metadata={'edge': 0.10}
+            current_price=0.50,
         )
         
         # Simulate larger loss
-        sample_market.last_price_cents = 5300  # Price moved against us
+        sample_market.yes_price = .5300  # Price moved against us
         
         markets = {sample_market.market_id: sample_market}
         exit_signals = strategy.generate_exit_signals([position], markets)
@@ -133,7 +139,7 @@ class TestMispricingStrategy:
         """Test that price history is tracked correctly."""
         # Add multiple price updates
         for i in range(20):
-            sample_market.last_price_cents = 5000 + (i * 10)
+            sample_market.yes_price = .5000 + (i * 10)
             strategy.on_market_update(sample_market)
         
         assert sample_market.market_id in strategy.price_history
@@ -143,7 +149,7 @@ class TestMispricingStrategy:
         """Test that history doesn't exceed max size."""
         # Add more updates than history size
         for i in range(100):
-            sample_market.last_price_cents = 5000 + i
+            sample_market.yes_price = .5000 + i
             strategy.on_market_update(sample_market)
         
         # Should be capped at history_size
@@ -174,7 +180,7 @@ class TestPricingModels:
         
         # Market expiring in 1 hour at 90% (should approach 100%)
         result = PricingModels.time_decay_expiration({
-            'time_to_expiry_seconds': 3600,
+            'time_to_close_seconds': 3600,
             'current_price': 0.90
         })
         
