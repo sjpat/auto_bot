@@ -12,10 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.config import Config
 from src.clients.kalshi_client import KalshiClient
-from src.trading.spike_detector import SpikeDetector
 from src.trading.market_filter import MarketFilter
-from src.strategies.strategy_manager import StrategyManager
-
+from src.strategies.strategy_manager import StrategyManager  # ✅ NEW
 
 class BotMonitor:
     """Monitor bot performance and opportunities."""
@@ -23,15 +21,14 @@ class BotMonitor:
     def __init__(self):
         self.config = Config()
         self.client = KalshiClient(self.config)
-        self.strategy_manager = StrategyManager(self.config)
+        self.strategy_manager = StrategyManager(self.config)  # ✅ Already correct
         self.market_filter = MarketFilter(self.config)
         
         self.stats = {
             'start_time': datetime.now(),
             'markets_monitored': 0,
-            'spikes_detected': 0,
-            'opportunities_found': 0,
-            'last_spike_time': None
+            'opportunities_detected': 0,  # ✅ Renamed from spikes_detected
+            'last_opportunity_time': None  # ✅ Renamed
         }
     
     async def run_monitoring_cycle(self):
@@ -62,21 +59,18 @@ class BotMonitor:
             tradeable = self.market_filter.filter_tradeable_markets(all_markets)
             print(f"   Tradeable markets: {len(tradeable)}")
             
-            # 4. Build price history for top markets
+            # 4. Update price history for all strategies
             print(f"\n📈 Building price history...")
-            for market in tradeable[:10]:  # Top 10
-                self.spike_detector.add_price(
-                    market.market_id,
-                    market.price,
-                    datetime.now()
-                )
+            for market in tradeable[:20]:  # Top 20
+                self.strategy_manager.on_market_update(market)  # ✅ FIXED
             
+            # 5. Detect opportunities from ALL strategies
             print(f"\n🔍 Detecting opportunities (All Strategies)...")
             signals = self.strategy_manager.generate_entry_signals(tradeable[:20])
-
+            
             if signals:
-                self.stats['spikes_detected'] += len(signals)  # Rename this to opportunities_detected
-                self.stats['last_spike_time'] = datetime.now()
+                self.stats['opportunities_detected'] += len(signals)
+                self.stats['last_opportunity_time'] = datetime.now()
                 print(f"   🔔 FOUND {len(signals)} OPPORTUNITY(IES)!")
                 
                 for i, signal in enumerate(signals, 1):
@@ -103,36 +97,15 @@ class BotMonitor:
                         print(f"   Expires: {market.time_to_expiry_seconds/3600:.1f}h")
             else:
                 print(f"   No opportunities detected by any strategy")
-
-            # Update price history for all strategies:
-            for market in tradeable[:20]:
-                self.strategy_manager.on_market_update(market)  
             
-            # 6. Show top opportunities
-            print(f"\n🎯 Top Opportunities:")
-            ranked = self.market_filter.rank_markets_by_opportunity(
-                tradeable[:20],
-                self.spike_detector
-            )
-            
-            for i, market in enumerate(ranked[:5], 1):
-                history_len = len(
-                    self.spike_detector.price_history.get(market.market_id, [])
-                )
-                print(f"   {i}. {market.market_id[:30]}...")
-                print(f"      Price: ${market.price:.4f} | "
-                      f"Liquidity: ${market.liquidity_usd:.2f} | "
-                      f"History: {history_len} points | "
-                      f"Expires: {market.time_to_expiry_seconds/3600:.1f}h")
-            
-            # 7. Show stats
+            # 6. Show stats
             self._print_stats()
             
         except Exception as e:
             print(f"\n❌ Monitoring error: {e}")
             import traceback
             traceback.print_exc()
-
+    
     async def cleanup(self):
         """Clean up resources when monitoring stops."""
         await self.client.close()
@@ -144,14 +117,13 @@ class BotMonitor:
         uptime = (datetime.now() - self.stats['start_time']).total_seconds()
         print(f"   Uptime: {uptime/60:.1f} minutes")
         print(f"   Markets monitored: {self.stats['markets_monitored']}")
-        print(f"   Spikes detected: {self.stats['spikes_detected']}")
+        print(f"   Opportunities detected: {self.stats['opportunities_detected']}")
         
-        if self.stats['last_spike_time']:
-            time_since = (datetime.now() - self.stats['last_spike_time']).total_seconds()
-            print(f"   Last spike: {time_since/60:.1f} minutes ago")
+        if self.stats['last_opportunity_time']:
+            time_since = (datetime.now() - self.stats['last_opportunity_time']).total_seconds()
+            print(f"   Last opportunity: {time_since/60:.1f} minutes ago")
         else:
-            print(f"   Last spike: Never")
-
+            print(f"   Last opportunity: Never")
 
 async def main():
     """Run monitoring in loop."""
@@ -174,13 +146,11 @@ async def main():
             wait_time = 60  # 1 minute
             print(f"\n⏳ Waiting {wait_time}s until next check...")
             await asyncio.sleep(wait_time)
-            
+    
     except KeyboardInterrupt:
         print("\n\n⚠️ Monitoring stopped by user")
     finally:
-        # ✅ Close session when monitoring stops completely
         await monitor.cleanup()
-
 
 if __name__ == "__main__":
     asyncio.run(main())
