@@ -82,12 +82,12 @@ class MispricingStrategy(BaseStrategy):
             
             if fair_value:
                 # Calculate edge
-                edge = abs(fair_value.probability - market.price)
+                edge = abs(fair_value.probability - market.yes_price)
                 
                 # Check if edge meets threshold
                 if edge >= self.min_edge and fair_value.confidence >= self.min_confidence:
                     # Determine direction
-                    if fair_value.probability > market.price:
+                    if fair_value.probability > market.yes_price:
                         signal_type = SignalType.BUY  # Underpriced
                     else:
                         signal_type = SignalType.SELL  # Overpriced
@@ -95,12 +95,12 @@ class MispricingStrategy(BaseStrategy):
                     signal = Signal(
                         signal_type=signal_type,
                         market_id=market.market_id,
-                        price=market.price,
+                        price=market.yes_price,
                         confidence=fair_value.confidence,
                         metadata={
                             'edge': edge,
                             'fair_value': fair_value.probability,
-                            'market_price': market.price,
+                            'market_price': market.yes_price,
                             'pricing_method': fair_value.method,
                             'pricing_metadata': fair_value.metadata
                         }
@@ -116,7 +116,7 @@ class MispricingStrategy(BaseStrategy):
                         f"💰 Mispricing detected: {market.market_id[:20]}... | "
                         f"Edge: {edge:.1%} | "
                         f"Fair: {fair_value.probability:.1%} | "
-                        f"Market: {market.price:.1%} | "
+                        f"Market: {market.yes_price:.1%} | "
                         f"Method: {fair_value.method}"
                     )
         
@@ -148,7 +148,7 @@ class MispricingStrategy(BaseStrategy):
                 continue
             
             # Update position
-            position.update_current_price(market.price)
+            position.update_current_price(market.yes_price)
             
             # Check exit conditions
             exit_reason = self._check_mispricing_exit(position, market)
@@ -157,7 +157,7 @@ class MispricingStrategy(BaseStrategy):
                 signal = Signal(
                     signal_type=SignalType.SELL,
                     market_id=position.market_id,
-                    price=market.price,
+                    price=market.yes_price,
                     confidence=1.0,
                     metadata={
                         'reason': exit_reason,
@@ -185,8 +185,8 @@ class MispricingStrategy(BaseStrategy):
         
         # Method 1: YES/NO complement
         fair_value = self.pricing_models.binary_yes_no_complement({
-            'yes_price': market.price,
-            'no_price': 1.0 - market.price  # Kalshi doesn't always provide NO
+            'yes_price': market.yes_price,
+            'no_price': market.no_price  # Kalshi doesn't always provide NO
         })
         if fair_value:
             candidates.append(fair_value)
@@ -194,7 +194,7 @@ class MispricingStrategy(BaseStrategy):
         # Method 2: Time decay (near expiration)
         fair_value = self.pricing_models.time_decay_expiration({
             'time_to_expiry_seconds': market.time_to_expiry_seconds,
-            'current_price': market.price
+            'current_price': market.yes_price
         })
         if fair_value:
             candidates.append(fair_value)
@@ -204,7 +204,7 @@ class MispricingStrategy(BaseStrategy):
             history = list(self.price_history[market.market_id])
             fair_value = self.pricing_models.moving_average_reversion(
                 price_history=history,
-                current_price=market.price
+                current_price=market.yes_price
             )
             if fair_value:
                 candidates.append(fair_value)
@@ -241,7 +241,7 @@ class MispricingStrategy(BaseStrategy):
         # 4. Price has converged to fair value
         if market.market_id in self.fair_values:
             fair_value = self.fair_values[market.market_id]
-            current_edge = abs(fair_value.probability - market.price)
+            current_edge = abs(fair_value.probability - market.yes_price)
             
             # If edge has decreased significantly (60%+ correction)
             original_edge = position.metadata.get('edge', 0.10)
