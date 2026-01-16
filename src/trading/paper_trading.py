@@ -159,7 +159,7 @@ class PaperTradingClient:
     
     async def get_markets(self, status: str = "open", limit: int = 1000, filter_untradeable: bool = True) -> List[Market]:
         """Get REAL markets from Kalshi."""
-        return await self.real_client.get_markets(status=status, limit=limit, filter_untradeable=filter_untradeable)
+        return await self.real_client.get_markets(status=status)
     
     async def get_market(self, market_id: str) -> Market:
         """Get REAL market data from Kalshi."""
