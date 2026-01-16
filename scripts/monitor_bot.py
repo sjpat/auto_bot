@@ -122,9 +122,11 @@ class BotMonitor:
             print(f"\n❌ Monitoring error: {e}")
             import traceback
             traceback.print_exc()
-        
-        finally:
-            await self.client.close()
+
+    async def cleanup(self):
+        """Clean up resources when monitoring stops."""
+        await self.client.close()
+        print("\n🧹 Cleaned up resources")
     
     def _print_stats(self):
         """Print session statistics."""
@@ -165,6 +167,9 @@ async def main():
             
     except KeyboardInterrupt:
         print("\n\n⚠️ Monitoring stopped by user")
+    finally:
+        # ✅ Close session when monitoring stops completely
+        await monitor.cleanup()
 
 
 if __name__ == "__main__":

@@ -171,7 +171,6 @@ class TradingBot:
                 all_markets = await self.client.get_markets(
                     status="open",
                     limit=200,
-                    min_volume=0,
                     filter_untradeable=False
                 )
                 
