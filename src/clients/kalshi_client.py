@@ -39,7 +39,7 @@ class OrderTypeEnum(str, Enum):
 
 @dataclass
 class Market:
-    """Market data structure."""
+    """Market data structure with compatibility for both strategies."""
     market_id: str
     title: str
     status: str  # 'open', 'closed', 'halted'
@@ -52,7 +52,17 @@ class Market:
     @property
     def price(self) -> float:
         """Get last price as float (0.00-1.00)."""
-        return self.last_price_cents / 10000.0 
+        return self.last_price_cents / 10000.0
+    
+    @property
+    def yes_price(self) -> float:
+        """YES price (for compatibility with strategies)."""
+        return self.price
+    
+    @property
+    def no_price(self) -> float:
+        """NO price (complement of YES price)."""
+        return 1.0 - self.price
     
     @property
     def liquidity_usd(self) -> float:
@@ -78,6 +88,11 @@ class Market:
     def is_tradeable(self) -> bool:
         """Check if market is tradeable (open + sufficient liquidity)."""
         return self.is_open and self.liquidity_usd >= 1.0
+    
+    def is_liquid(self, min_liquidity: float = 1.0) -> bool:
+        """Check if market has sufficient liquidity (for strategy compatibility)."""
+        return self.liquidity_usd >= min_liquidity
+
 
 
 @dataclass
