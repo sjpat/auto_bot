@@ -19,7 +19,7 @@ var/
 .installed.cfg
 *.egg
 MANIFEST
-.venv
+.venv/
 venv/
 ENV/
 .env*
@@ -95,3 +95,6 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+
+.python-version
+pyproject.toml
