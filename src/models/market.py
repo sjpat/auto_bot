@@ -118,12 +118,10 @@ class Market:
             return (self.no_ask + self.no_bid) / 2
         return self.no_price
     
-    @property
-    def is_liquid(self, min_liquidity: float = 500.0) -> bool:
+    def is_liquid(self, min_liquidity: float) -> bool:
         """Check if market has sufficient liquidity."""
         return self.liquidity >= min_liquidity
     
-    @property
     def is_tradeable(self, min_liquidity: float = 500.0, max_hours_to_close: float = 1.0) -> bool:
         """
         Check if market is tradeable.

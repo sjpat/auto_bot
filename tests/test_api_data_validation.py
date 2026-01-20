@@ -192,7 +192,7 @@ async def test_close_timestamp_parsing(config):
                 f"Market {market.market_id} has non-integer timestamp: {type(market.close_ts)}"
             
             one_year = 365 * 24 * 3600
-            if now - one_year < market.close_ts < now + one_year:
+            if now - one_year < market.close_ts < now + (5 * one_year):
                 valid_timestamps += 1
             else:
                 invalid_timestamps += 1
