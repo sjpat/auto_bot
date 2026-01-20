@@ -40,6 +40,7 @@ class MispricingStrategy(BaseStrategy):
         self.min_edge = config.get('MIN_EDGE', 0.08)  # 8% edge minimum
         self.min_confidence = config.get('MIN_CONFIDENCE', 0.6)
         self.max_holding_time = config.get('MAX_HOLDING_TIME', 3600 * 4)  # 4 hours
+        self.min_liquidity_requirement = config.get('MIN_LIQUIDITY_REQUIREMENT', 200.0)
         
         # Pricing models
         self.pricing_models = PricingModels()
@@ -71,7 +72,7 @@ class MispricingStrategy(BaseStrategy):
         
         for market in markets:
             # Skip if not tradeable
-            if not market.is_open or not market.is_liquid:
+            if not market.is_open or not market.is_liquid(min_liquidity=self.min_liquidity_requirement):
                 continue
             
             # Update price history

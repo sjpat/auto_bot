@@ -43,7 +43,8 @@ class StrategyManager:
                     'TARGET_PROFIT_USD': config.TARGET_PROFIT_USD,
                     'TARGET_LOSS_USD': config.TARGET_LOSS_USD,
                     'HOLDING_TIME_LIMIT': config.HOLDING_TIME_LIMIT,
-                    'COOLDOWN_PERIOD': config.COOLDOWN_PERIOD
+                    'COOLDOWN_PERIOD': config.COOLDOWN_PERIOD,
+                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
                 }
                 self.spike_strategy = SpikeStrategy(spike_config)
                 self.strategies.append(('spike', self.spike_strategy))
@@ -60,7 +61,8 @@ class StrategyManager:
                     'MIN_EDGE': getattr(config, 'MIN_EDGE', 0.08),
                     'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MISPRICING', 0.60),
                     'MAX_HOLDING_TIME': getattr(config, 'MISPRICING_MAX_HOLDING_TIME', 14400),
-                    'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50)
+                    'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50),
+                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
                 }
                 self.mispricing_strategy = MispricingStrategy(mispricing_config)
                 self.strategies.append(('mispricing', self.mispricing_strategy))
@@ -244,6 +246,15 @@ class StrategyManager:
                 if hasattr(strategy, 'record_trade_start'):
                     strategy.record_trade_start(market_id)
     
+    def get_all_price_histories(self) -> Dict[str, Dict[str, List[float]]]:
+        """Get price histories from all strategies."""
+        histories = {}
+        for strategy_name, strategy in self.strategies:
+            if hasattr(strategy, 'price_history'):
+                # convert deques to lists for serialization
+                histories[strategy_name] = {market_id: list(history) for market_id, history in strategy.price_history.items()}
+        return histories
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics from all strategies."""
         stats = {
