@@ -23,7 +23,7 @@ class TestIntegration:
             # Setup components
             fee_calc = FeeCalculator()
             spike_detector = SpikeDetector(config)
-            position_manager = PositionManager('kalshi', config, fee_calc)
+            position_manager = PositionManager('kalshi', config)
             threshold = config.SPIKE_THRESHOLD
 
             mock_client = Mock()
