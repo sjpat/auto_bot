@@ -16,7 +16,6 @@ from src.strategies.strategy_manager import StrategyManager
 from src.trading.order_executor import OrderExecutor
 from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
-from src.clients.kalshi_client import KalshiClient
 from src.trading.fee_calculator import FeeCalculator
 from src.trading.market_filter import MarketFilter
 
@@ -152,15 +151,14 @@ class TradingBot:
 
                 # 4. Rank by opportunity
                 # In the future, the spike_detector could be made a property of the strategy_manager
-                spike_detector = self.strategy_manager.spike_strategy if hasattr(self.strategy_manager, 'spike_strategy') else None
-                if not spike_detector:
-                    self.logger.warning("Spike detector not found in strategy manager. Skipping ranking.")
-                    ranked_markets = tradeable_markets
-                else:
+                spike_detector = getattr(self.strategy_manager, 'spike_strategy', None)
+                if spike_detector:
                     ranked_markets = self.market_filter.rank_markets_by_opportunity(
                         tradeable_markets,
                         spike_detector
                     )
+                else:
+                    ranked_markets = tradeable_markets
 
                 # 5. Generate signals from top markets
                 top_markets = ranked_markets[:20]
@@ -198,8 +196,16 @@ class TradingBot:
                 self.change_pct = change_pct
                 self.market_id = market_id
         
+        # Map strategy-specific metrics to 'change_pct' for RiskManager validation
+        magnitude = signal.metadata.get('spike_magnitude', 0.0)
+        if magnitude == 0.0:
+            if 'roc' in signal.metadata:
+                magnitude = abs(signal.metadata['roc'])
+            elif 'edge' in signal.metadata:
+                magnitude = signal.metadata['edge']
+        
         spike_obj = MockSpike(
-            change_pct=signal.metadata.get('spike_magnitude', 0.0),
+            change_pct=magnitude,
             market_id=signal.market_id
         )
 

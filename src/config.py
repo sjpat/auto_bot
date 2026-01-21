@@ -58,9 +58,15 @@ class Config:
     # ===== Strategy Selection =====
     ENABLE_SPIKE_STRATEGY: bool = os.getenv("ENABLE_SPIKE_STRATEGY", "true").lower() == "true"
     ENABLE_MISPRICING_STRATEGY: bool = os.getenv("ENABLE_MISPRICING_STRATEGY", "true").lower() == "true"
+    ENABLE_MOMENTUM_STRATEGY: bool = os.getenv("ENABLE_MOMENTUM_STRATEGY", "false").lower() == "true"
+
+    # ===== Momentum Strategy Parameters =====
+    MOMENTUM_WINDOW: int = int(os.getenv("MOMENTUM_WINDOW", "6"))
+    MOMENTUM_THRESHOLD: float = float(os.getenv("MOMENTUM_THRESHOLD", "0.03"))
+    MIN_CONFIDENCE_MOMENTUM: float = float(os.getenv("MIN_CONFIDENCE_MOMENTUM", "0.65"))
 
     # ===== Trading Parameters =====
-    TRADE_UNIT: int = int(os.getenv("TRADE_UNIT", "50.0"))
+    TRADE_UNIT: int = int(float(os.getenv("TRADE_UNIT", "50")))
     SPIKE_THRESHOLD: float = float(os.getenv("SPIKE_THRESHOLD", "0.04"))
     SOLD_POSITION_TIME: int = int(os.getenv("SOLD_POSITION_TIME", "120"))
     HOLDING_TIME_LIMIT: int = int(os.getenv("HOLDING_TIME_LIMIT", "3600"))
@@ -79,6 +85,11 @@ class Config:
     FEE_AWARE_SPIKE_THRESHOLD: float = float(
         os.getenv("FEE_AWARE_SPIKE_THRESHOLD", "0.03")
     )
+
+    # ===== Trailing Stop Parameters =====
+    USE_TRAILING_STOP: bool = os.getenv("USE_TRAILING_STOP", "false").lower() == "true"
+    TRAILING_STOP_ACTIVATION_USD: float = float(os.getenv("TRAILING_STOP_ACTIVATION_USD", "5.00"))
+    TRAILING_STOP_DISTANCE_USD: float = float(os.getenv("TRAILING_STOP_DISTANCE_USD", "2.50"))
     
     # ===== Risk Management =====
     MAX_DAILY_LOSS_PCT: float = float(os.getenv("MAX_DAILY_LOSS_PCT", "0.15"))

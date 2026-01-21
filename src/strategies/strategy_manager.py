@@ -6,6 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from src.strategies.spike_strategy import SpikeStrategy
 from src.strategies.mispricing_strategy import MispricingStrategy
+from src.strategies.momentum_strategy import MomentumStrategy
 from src.strategies.base_strategy import Signal
 from src.models.market import Market
 from src.models.position import Position
@@ -74,6 +75,26 @@ class StrategyManager:
         else:
             self.logger.info("⏭️  Mispricing strategy disabled")
         
+        # Initialize Momentum Strategy
+        if getattr(config, 'ENABLE_MOMENTUM_STRATEGY', False):
+            try:
+                momentum_config = {
+                    'MOMENTUM_WINDOW': getattr(config, 'MOMENTUM_WINDOW', 6),
+                    'MOMENTUM_THRESHOLD': getattr(config, 'MOMENTUM_THRESHOLD', 0.03),
+                    'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MOMENTUM', 0.65),
+                    'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
+                    'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5),
+                    'HOLDING_TIME_LIMIT': getattr(config, 'HOLDING_TIME_LIMIT', 1800),
+                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                }
+                self.momentum_strategy = MomentumStrategy(momentum_config)
+                self.strategies.append(('momentum', self.momentum_strategy))
+                self.logger.info("✅ Momentum strategy enabled")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to load momentum strategy: {e}")
+        else:
+            self.logger.info("⏭️  Momentum strategy disabled")
+
         if not self.strategies:
             raise ValueError("No strategies enabled! Enable at least one strategy.")
         
@@ -222,6 +243,8 @@ class StrategyManager:
             strategy = signal.metadata.get('strategy', 'unknown')
             if strategy == 'mispricing':
                 score *= 1.1  # Slight preference for mispricing (works in low volatility)
+            elif strategy == 'momentum':
+                score *= 1.05 # Momentum is good for active events
             
             scored_signals.append((score, signal))
         

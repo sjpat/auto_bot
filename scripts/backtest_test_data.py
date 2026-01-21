@@ -104,8 +104,13 @@ async def main():
     print(f"\n🔗 Initializing live bot components...")
     live_config = Config(platform="kalshi")
     # Manually set targets for StrategyManager to pick up
-    live_config.TARGET_PROFIT_USD = 20.0
-    live_config.TARGET_LOSS_USD = -5.0
+    live_config.TARGET_PROFIT_USD = 30.0
+    live_config.TARGET_LOSS_USD = -15.0
+    
+    # Enable Momentum Strategy for backtest
+    live_config.ENABLE_MOMENTUM_STRATEGY = True
+    live_config.MOMENTUM_WINDOW = 6
+    live_config.MOMENTUM_THRESHOLD = 0.03
     
     strategy_manager = StrategyManager(config=live_config)
     risk_manager = RiskManager(client=None, config=live_config)
@@ -128,20 +133,20 @@ async def main():
         starting_balance=10000.0,
         
         # Position sizing (FIXED, not percentage)
-        TRADE_UNIT=100,  # Fixed 100 contracts per trade
+        TRADE_UNIT=500,  # Increased to 500 to overcome fees and hit targets easier
         MAX_CONCURRENT_TRADES=3,  # From live bot
         
         # Spike detection (Increased to filter noise)
-        SPIKE_THRESHOLD=0.06,
+        SPIKE_THRESHOLD=0.05,  # Lowered slightly to catch more valid moves
         
         # Exit targets (Wider stops, higher targets)
-        TARGET_PROFIT_USD=20.00,  # Increased to allow trailing stop to work
-        TARGET_LOSS_USD=-5.00,    # Give trade room to breathe
+        TARGET_PROFIT_USD=30.00,  # Scaled up for larger position size
+        TARGET_LOSS_USD=-15.00,   # Wider stop to prevent noise outs
         
         # Trailing Stop
         USE_TRAILING_STOP=True,
-        TRAILING_STOP_ACTIVATION_USD=5.00,  # Lock in once we have $5 profit
-        TRAILING_STOP_DISTANCE_USD=2.50,    # Give it $2.50 wiggle room
+        TRAILING_STOP_ACTIVATION_USD=10.00,  # Lock in once we have $10 profit
+        TRAILING_STOP_DISTANCE_USD=5.00,     # Give it $5.00 wiggle room
         
         # Slippage tolerance
         MAX_SLIPPAGE_TOLERANCE=0.025,

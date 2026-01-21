@@ -15,6 +15,10 @@ def config():
     # Override defaults to match test expectations
     cfg.SPIKE_THRESHOLD = 0.04
     cfg.TARGET_PROFIT_USD = 2.50
+    # Momentum defaults
+    cfg.ENABLE_MOMENTUM_STRATEGY = True
+    cfg.MOMENTUM_WINDOW = 3
+    cfg.MOMENTUM_THRESHOLD = 0.05
     return cfg
 
 

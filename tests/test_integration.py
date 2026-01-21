@@ -12,6 +12,7 @@ from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
 from src.trading.fee_calculator import FeeCalculator
 from datetime import datetime
+from src.strategies.strategy_manager import StrategyManager
 
 
 class TestIntegration:
@@ -149,4 +150,46 @@ class TestIntegration:
             
             # Should reject due to excessive slippage
             assert risk_check.passed is False
+        asyncio.run(_test())
+
+    def test_momentum_strategy_integration(self, config, sample_market):
+        """Test that momentum strategy is correctly integrated and generating signals."""
+        async def _test():
+            # Enable momentum strategy in config
+            config.ENABLE_MOMENTUM_STRATEGY = True
+            config.MOMENTUM_WINDOW = 3
+            config.MOMENTUM_THRESHOLD = 0.05
+            config.MIN_CONFIDENCE_MOMENTUM = 0.6
+            
+            # Initialize Strategy Manager
+            strategy_manager = StrategyManager(config)
+            
+            # Verify momentum strategy is loaded
+            strategy_names = [name for name, _ in strategy_manager.strategies]
+            assert 'momentum' in strategy_names
+            
+            # Simulate price run (Momentum)
+            # 0.50 -> 0.51 -> 0.52 -> 0.56 (12% move over 3 steps)
+            prices = [0.50, 0.51, 0.52, 0.56]
+            
+            for price in prices:
+                sample_market.last_price_cents = int(price * 10000)
+                strategy_manager.on_market_update(sample_market)
+            
+            # Generate signals
+            signals = strategy_manager.generate_entry_signals([sample_market])
+            
+            # Should detect momentum signal
+            assert len(signals) > 0
+            signal = signals[0]
+            
+            assert signal.market_id == sample_market.market_id
+            assert signal.signal_type == 'buy'
+            assert signal.metadata['strategy'] == 'momentum'
+            assert signal.metadata['roc'] > 0.05
+            
+            print(f"\n✅ Momentum Integration Test Passed")
+            print(f"   Signal: {signal.signal_type} on {signal.market_id}")
+            print(f"   ROC: {signal.metadata['roc']:.2%}")
+            
         asyncio.run(_test())

@@ -206,6 +206,96 @@ def generate_earnings_surprise():
     
     return prices
 
+def generate_sustained_momentum():
+    """
+    Simulate a sustained trend that triggers momentum but not necessarily spikes.
+    Gradual increase over time (e.g. 1.5% per tick).
+    """
+    base_time = datetime(2025, 5, 1, 12, 0, 0)
+    prices = []
+    
+    # Stable start
+    current_price = 0.40
+    for i in range(20):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price + random.uniform(-0.005, 0.005),
+            'liquidity': 50000,
+            'volume': 10000
+        })
+    
+    # Sustained trend (Momentum)
+    # Increase by ~1.5% per minute for 20 minutes
+    # Total move is significant, but per-tick is below spike threshold (4%)
+    # Momentum strategy (window=6, threshold=3%) should catch this.
+    base_time = base_time + timedelta(minutes=20)
+    for i in range(20):
+        current_price *= 1.015  # 1.5% increase
+        if current_price > 0.98: current_price = 0.98
+        
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price,
+            'liquidity': 60000,
+            'volume': 20000
+        })
+        
+    # Reversal / Profit taking
+    base_time = base_time + timedelta(minutes=20)
+    for i in range(15):
+        current_price *= 0.99  # Slow drift down
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price,
+            'liquidity': 50000,
+            'volume': 10000
+        })
+        
+    return prices
+
+def generate_march_madness_upset():
+    """
+    Simulate March Madness upset (15 seed beats 2 seed)
+    High volatility and eventual crash for the favorite.
+    """
+    base_time = datetime(2025, 3, 21, 19, 0, 0)  # March Madness First Round
+    prices = []
+    
+    # Favorite starts strong
+    current_price = 0.82
+    for i in range(10):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i*2)).isoformat(),
+            'price': current_price + random.uniform(-0.01, 0.01),
+            'liquidity': 80000,
+            'volume': 15000
+        })
+        
+    # Underdog makes a run (Momentum down for favorite)
+    base_time = base_time + timedelta(minutes=20)
+    for i in range(15):
+        current_price -= 0.02  # Drops 2% per tick (sustained momentum)
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price + random.uniform(-0.01, 0.01),
+            'liquidity': 90000,
+            'volume': 25000
+        })
+        
+    # Panic selling / Crash
+    base_time = base_time + timedelta(minutes=15)
+    spike_sequence = [current_price, current_price-0.1, 0.30, 0.20, 0.10, 0.05]
+    
+    for i, price in enumerate(spike_sequence):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': max(0.01, price),
+            'liquidity': 100000,
+            'volume': 50000
+        })
+        
+    return prices
+
 def main():
     """Generate test dataset with multiple volatile markets"""
     
@@ -219,6 +309,8 @@ def main():
         'FED-RATE-DEC24': generate_fed_decision_spike(),
         'NBA-FINALS-G5': generate_nba_finals_comeback(),
         'TECH-EARNINGS': generate_earnings_surprise(),
+        'MOMENTUM-TEST': generate_sustained_momentum(),
+        'MARCH-MADNESS-UPSET': generate_march_madness_upset(),
     }
     
     # Save to file

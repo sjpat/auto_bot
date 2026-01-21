@@ -115,6 +115,10 @@ class Trade:
         self._current_price = current_price
         self._current_timestamp = current_timestamp
 
+    def update_current_price(self, current_price: float):
+        """Update current price (Strategy compatibility wrapper)"""
+        self._current_price = current_price
+
     @property
     def position_id(self) -> str:
         return self.trade_id
@@ -472,10 +476,18 @@ class BacktestEngine:
                 if str(signal.signal_type).upper().endswith('SELL'):
                     direction = 'down'
             
+            # Map strategy-specific metrics to 'spike_magnitude'
+            magnitude = signal.metadata.get('spike_magnitude', 0.0)
+            if magnitude == 0.0:
+                if 'roc' in signal.metadata:
+                    magnitude = abs(signal.metadata['roc'])
+                elif 'edge' in signal.metadata:
+                    magnitude = signal.metadata['edge']
+            
             return {
                 'confidence': signal.confidence,
                 'direction': signal.metadata.get('direction', direction),
-                'spike_magnitude': signal.metadata.get('spike_magnitude', 0.0),
+                'spike_magnitude': magnitude,
                 'metadata': signal.metadata
             }
         
