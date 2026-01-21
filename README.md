@@ -1,15 +1,21 @@
-# PolySpike Trader
+# Automated Trading Bot (Kalshi & Polymarket)
 
-An automated trading bot for Polymarket that detects price spikes and executes trades on the Polygon network.
+A sophisticated automated trading bot designed for prediction markets (Kalshi currently supported, Polymarket planned). It features a multi-strategy engine, comprehensive risk management, and a high-fidelity backtesting system.
 
 ## Features
 
-- Multi-pair trading support
-- Automatic price spike detection
-- Configurable take-profit and stop-loss levels
-- USDC balance management
-- Automatic API credential refresh
-- Comprehensive logging
+- **Multi-Platform Support**: Designed for Kalshi (active) and Polymarket (structure in place).
+- **Advanced Strategy Engine**:
+  - **Spike Strategy**: Detects and trades sudden price movements.
+  - **Mispricing Strategy**: Identifies arbitrage and fair-value discrepancies.
+- **Robust Risk Management**:
+  - 3-Layer Defense: Pre-trade checks, active monitoring, and post-trade analysis.
+  - Circuit Breakers: Daily loss limits and account suspension detection.
+  - Execution Protection: Slippage monitoring and settlement tracking.
+- **High-Fidelity Backtesting**:
+  - Parity-aligned engine that reuses live bot components for accurate simulations.
+  - Synthetic data generation for stress testing.
+- **Paper Trading**: Full simulation mode to test strategies without real capital.
 
 ## Setup
 
