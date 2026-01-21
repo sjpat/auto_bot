@@ -11,7 +11,11 @@ from src.trading.fee_calculator import FeeCalculator
 @pytest.fixture
 def config():
     """Provide test configuration."""
-    return Config()
+    cfg = Config()
+    # Override defaults to match test expectations
+    cfg.SPIKE_THRESHOLD = 0.04
+    cfg.TARGET_PROFIT_USD = 2.50
+    return cfg
 
 
 @pytest.fixture

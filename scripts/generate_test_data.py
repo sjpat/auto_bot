@@ -20,7 +20,9 @@ def generate_election_night_data():
     for i in range(10):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*5)).isoformat(),
-            'price': 0.55 + random.uniform(-0.02, 0.02)
+            'price': 0.55 + random.uniform(-0.02, 0.02),
+            'liquidity': 50000,
+            'volume': 10000
         })
     
     # Results start coming in: Sharp spike
@@ -30,14 +32,18 @@ def generate_election_night_data():
     for i, price in enumerate(spike_prices):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*3)).isoformat(),
-            'price': price + random.uniform(-0.005, 0.005)
+            'price': price + random.uniform(-0.005, 0.005),
+            'liquidity': 50000,
+            'volume': 10000
         })
     
     # Stabilization
     for i in range(20):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=24 + i*5)).isoformat(),
-            'price': 0.95 + random.uniform(-0.01, 0.01)
+            'price': 0.95 + random.uniform(-0.01, 0.01),
+            'liquidity': 50000,
+            'volume': 10000
         })
     
     return prices
@@ -54,7 +60,9 @@ def generate_nfl_playoff_spike():
     for i in range(15):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*2)).isoformat(),
-            'price': 0.50 + random.uniform(-0.03, 0.03)
+            'price': 0.50 + random.uniform(-0.03, 0.03),
+            'liquidity': 25000,
+            'volume': 5000
         })
     
     # Big touchdown: 15% spike
@@ -64,14 +72,18 @@ def generate_nfl_playoff_spike():
     for i, price in enumerate(spike_sequence):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
-            'price': price
+            'price': price,
+            'liquidity': 25000,
+            'volume': 5000
         })
     
     # Game continues
     for i in range(30):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=6 + i*2)).isoformat(),
-            'price': 0.63 + random.uniform(-0.04, 0.04)
+            'price': 0.63 + random.uniform(-0.04, 0.04),
+            'liquidity': 25000,
+            'volume': 5000
         })
     
     return prices
@@ -88,7 +100,9 @@ def generate_fed_decision_spike():
     for i in range(25):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*2)).isoformat(),
-            'price': 0.72 + random.uniform(-0.02, 0.02)
+            'price': 0.72 + random.uniform(-0.02, 0.02),
+            'liquidity': 100000,
+            'volume': 20000
         })
     
     # Decision announced: 20% spike
@@ -98,14 +112,18 @@ def generate_fed_decision_spike():
     for i, price in enumerate(spike_sequence):
         prices.append({
             'timestamp': (base_time + timedelta(seconds=i*30)).isoformat(),
-            'price': price
+            'price': price,
+            'liquidity': 100000,
+            'volume': 20000
         })
     
     # Post-announcement
     for i in range(20):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=2.5 + i*3)).isoformat(),
-            'price': 0.86 + random.uniform(-0.02, 0.02)
+            'price': 0.86 + random.uniform(-0.02, 0.02),
+            'liquidity': 100000,
+            'volume': 20000
         })
     
     return prices
@@ -121,7 +139,9 @@ def generate_nba_finals_comeback():
     for i in range(20):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*2)).isoformat(),
-            'price': 0.75 + random.uniform(-0.03, 0.03)
+            'price': 0.75 + random.uniform(-0.03, 0.03),
+            'liquidity': 15000,
+            'volume': 3000
         })
     
     # Team B makes comeback: Sharp decline (inverse spike)
@@ -131,14 +151,18 @@ def generate_nba_finals_comeback():
     for i, price in enumerate(spike_sequence):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*1.5)).isoformat(),
-            'price': price
+            'price': price,
+            'liquidity': 15000,
+            'volume': 3000
         })
     
     # Final minutes
     for i in range(15):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=10.5 + i*2)).isoformat(),
-            'price': 0.38 + random.uniform(-0.03, 0.03)
+            'price': 0.38 + random.uniform(-0.03, 0.03),
+            'liquidity': 15000,
+            'volume': 3000
         })
     
     return prices
@@ -154,7 +178,9 @@ def generate_earnings_surprise():
     for i in range(15):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i*3)).isoformat(),
-            'price': 0.45 + random.uniform(-0.02, 0.02)
+            'price': 0.45 + random.uniform(-0.02, 0.02),
+            'liquidity': 40000,
+            'volume': 8000
         })
     
     # Earnings released: Massive beat → 35% spike
@@ -164,14 +190,18 @@ def generate_earnings_surprise():
     for i, price in enumerate(spike_sequence):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
-            'price': price
+            'price': price,
+            'liquidity': 40000,
+            'volume': 8000
         })
     
     # Settlement
     for i in range(10):
         prices.append({
             'timestamp': (base_time + timedelta(minutes=6 + i*5)).isoformat(),
-            'price': 0.69 + random.uniform(-0.01, 0.02)
+            'price': 0.69 + random.uniform(-0.01, 0.02),
+            'liquidity': 40000,
+            'volume': 8000
         })
     
     return prices

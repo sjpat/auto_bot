@@ -6,12 +6,13 @@ import sys
 from datetime import datetime
 from typing import Optional
 import os
+import json
 
 from src.config import Config
 from src.logger import setup_logger
 # from src.clients.polymarket_client import PolymarketClient
 from src.clients.kalshi_client import KalshiClient
-from src.trading.spike_detector import SpikeDetector
+from src.strategies.strategy_manager import StrategyManager
 from src.trading.order_executor import OrderExecutor
 from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
@@ -72,7 +73,7 @@ class TradingBot:
             self.fee_calculator = None  # Placeholder for other platforms
 
         # Initialize trading components (platform-agnostic)
-        self.spike_detector = SpikeDetector(config=self.config)
+        self.strategy_manager = StrategyManager(config=self.config)
         self.order_executor = OrderExecutor(
             client=self.client,
             config=self.config
@@ -120,120 +121,142 @@ class TradingBot:
             raise
 
     
-    async def price_update_loop(self):
-        """Continuously fetch and process price updates"""
+    async def trade_execution_loop(self):
+        """Main loop for fetching data, generating signals, and executing trades."""
         while self.running:
             try:
-                # Get tradeable markets (filtered by platform)
-                if self.platform == "kalshi":
-                    markets = await self.get_tradeable_markets(
-                        status="open",
-                        filter_untradeable=False
-                    )
-                else:
-                    markets = await self.client.get_markets()
-                
-                # Update price history
-                for market in markets:
-                    market_id = market.market_id if hasattr(market, 'market_id') else market.id
-                    price = market.price if hasattr(market, 'price') else market.current_price
-                    
-                    self.spike_detector.add_price(
-                        market_id=market_id,
-                        price=price,
-                        timestamp=datetime.now()
-                    )
-                
-                self.logger.debug(f"Updated {len(markets)} markets")
-                await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
-                
-            except Exception as e:
-                self.logger.error(f"Price update error: {e}", exc_info=True)
-                await asyncio.sleep(5)
-    
-    async def get_tradeable_markets(self, status, filter_untradeable: bool = True):
-        """Get all open markets from Kalshi."""
-        try:
-            markets = await self.client.get_markets(status=status, filter_untradeable=filter_untradeable)
-            
-            self.logger.info(f"Found {len(markets)} open markets")
-            return markets  # Return ALL markets, filter for trading later
-            
-        except Exception as e:
-            self.logger.error(f"Failed to get markets: {e}")
-            return []
-
-    async def spike_detection_loop(self):
-        """Enhanced spike detection with filtering and ranking."""
-        while self.running:
-            try:
-                # Fetch all markets
+                # 1. Fetch all open markets
                 all_markets = await self.client.get_markets(
                     status="open",
                     limit=200,
                     filter_untradeable=False
                 )
-                
+
                 if not all_markets:
-                    self.logger.warning("No markets available")
-                    await asyncio.sleep(self.config.SPIKE_CHECK_INTERVAL)
+                    self.logger.warning("No open markets found.")
+                    await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
                     continue
-                
-                # Apply comprehensive filtering
+
+                # 2. Update price history for all markets
+                for market in all_markets:
+                    self.strategy_manager.on_market_update(market)
+                self.logger.debug(f"Updated price history for {len(all_markets)} markets")
+
+                # 3. Apply comprehensive filtering
                 tradeable_markets = self.market_filter.filter_tradeable_markets(all_markets)
-                
+
                 if not tradeable_markets:
                     self.logger.debug("No tradeable markets after filtering")
-                    await asyncio.sleep(self.config.SPIKE_CHECK_INTERVAL)
+                    await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
                     continue
-                
-                # Rank by opportunity
-                ranked_markets = self.market_filter.rank_markets_by_opportunity(
-                    tradeable_markets,
-                    self.spike_detector
-                )
-                
-                # Detect spikes on top markets (limit to top 20 to save processing)
+
+                # 4. Rank by opportunity
+                # In the future, the spike_detector could be made a property of the strategy_manager
+                spike_detector = self.strategy_manager.spike_strategy if hasattr(self.strategy_manager, 'spike_strategy') else None
+                if not spike_detector:
+                    self.logger.warning("Spike detector not found in strategy manager. Skipping ranking.")
+                    ranked_markets = tradeable_markets
+                else:
+                    ranked_markets = self.market_filter.rank_markets_by_opportunity(
+                        tradeable_markets,
+                        spike_detector
+                    )
+
+                # 5. Generate signals from top markets
                 top_markets = ranked_markets[:20]
-                spikes = self.spike_detector.detect_spikes(
-                    markets=top_markets,
-                    threshold=self.config.SPIKE_THRESHOLD
-                )
-                
-                if spikes:
-                    self.logger.info(f"🔔 Detected {len(spikes)} spike(s)!")
-                    
-                    for spike in spikes:
-                        # Get full market object
-                        market = next(
-                            (m for m in top_markets if m.market_id == spike.market_id),
-                            None
-                        )
-                        
+                signals = self.strategy_manager.generate_entry_signals(top_markets)
+
+                if signals:
+                    self.logger.info(f"🔔 Detected {len(signals)} opportunity(ies)!")
+
+                    for signal in signals:
+                        market = next((m for m in top_markets if m.market_id == signal.market_id), None)
                         if not market:
                             continue
-                        
-                        # Enhanced pre-trade validation
-                        if await self.should_trade_spike(market, spike):
-                            await self.execute_spike_trade(spike, market)
+
+                        # 6. Risk check and execution
+                        if await self.should_trade_signal(market, signal):
+                            await self.execute_signal_trade(signal, market)
                 else:
                     self.logger.debug(
-                        f"No spikes detected in {len(top_markets)} top markets "
+                        f"No signals generated from {len(top_markets)} top markets "
                         f"({len(tradeable_markets)} tradeable, {len(all_markets)} total)"
                     )
-                
-                await asyncio.sleep(self.config.SPIKE_CHECK_INTERVAL)
-                
+
+                await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
+
             except Exception as e:
-                self.logger.error(f"Spike detection error: {e}", exc_info=True)
+                self.logger.error(f"Error in trade execution loop: {e}", exc_info=True)
                 await asyncio.sleep(5)
+
+    async def should_trade_signal(self, market, signal) -> bool:
+        """Perform risk and quality checks before executing a trade."""
+        # 1. Risk manager check
+        # Create a mock spike object if signal doesn't have change_pct (compatibility)
+        class MockSpike:
+            def __init__(self, change_pct, market_id):
+                self.change_pct = change_pct
+                self.market_id = market_id
+        
+        spike_obj = MockSpike(
+            change_pct=signal.metadata.get('spike_magnitude', 0.0),
+            market_id=signal.market_id
+        )
+
+        risk_check = await self.risk_manager.can_trade_pre_submission(spike_obj)
+        if not risk_check.passed:
+            self.logger.debug(
+                f"❌ Risk check failed for {signal.market_id}: {risk_check.reason}"
+            )
+            return False
+        
+        # 2. Market quality checks
+        # Check liquidity
+        if market.liquidity_usd < self.config.MIN_LIQUIDITY_USD:
+            self.logger.debug(
+                f"❌ Low liquidity for {signal.market_id}: ${market.liquidity_usd:.2f}"
+            )
+            return False
+        
+        # Check spread
+        if market.best_ask_cents > 0 and market.best_bid_cents > 0:
+            spread_pct = (
+                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
+            )
+            if spread_pct > self.config.MAX_SPREAD_PCT:
+                self.logger.debug(
+                    f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
+                )
+                return False
+        
+        self.logger.info(
+            f"✅ Trade validation passed for {signal.market_id}: "
+            f"conf={signal.confidence:.1%}, price=${market.price:.4f}"
+        )
+        return True
     
+    async def execute_signal_trade(self, signal, market):
+        """Executes a trade based on a signal."""
+        # This method can be a dispatcher based on signal type or strategy
+        # For now, we'll assume all signals lead to a 'spike-like' trade
+        await self._execute_spike_trade(signal, market)
+
     async def position_management_loop(self):
         """Monitor open positions and execute exits"""
         while self.running:
             try:
                 # Check all open positions
                 positions = self.position_manager.get_active_positions()
+                
+                # 1. Strategy-based exits (e.g. Mispricing convergence)
+                # We need to fetch current market data for these positions
+                if positions:
+                    # Note: In a real scenario, we might want to batch fetch these
+                    # For now, we rely on the fact that we likely have recent data or fetch individually
+                    # StrategyManager expects a dict of {market_id: Market}
+                    # We will skip this optimization for now and rely on PositionManager's internal checks
+                    # OR implement the strategy check if PositionManager doesn't cover it.
+                    pass
                 
                 for position in positions:
                     # Evaluate exit conditions
@@ -247,6 +270,26 @@ class TradingBot:
                             position=position,
                             reason=exit_decision.reason
                         )
+                        continue
+
+                    # Check Strategy Manager Exits (Parity with Backtest)
+                    # This allows strategies to signal exits (e.g. fair value reached)
+                    # We need to construct a minimal market map for the strategy
+                    try:
+                        market = await self.client.get_market(position.market_id)
+                        market_map = {position.market_id: market}
+                        exit_signals = self.strategy_manager.generate_exit_signals([position], market_map)
+                        
+                        if exit_signals:
+                            signal = exit_signals[0]
+                            await self._execute_exit(
+                                position=position,
+                                reason=signal.metadata.get('reason', 'strategy_exit')
+                            )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error checking strategy exit for {position.market_id}: {e}"
+                        )
                 
                 await asyncio.sleep(self.config.POSITION_CHECK_INTERVAL)
                 
@@ -259,15 +302,12 @@ class TradingBot:
         try:
             self.logger.info(
                 f"💰 EXECUTING TRADE: {spike.market_id} | "
-                f"Spike: {spike.change_pct:+.1%} | "
-                f"Direction: {spike.direction} | "
-                f"Current: ${spike.current_price:.4f}"
+                f"Direction: {spike.signal_type} | "
+                f"Current: ${spike.price:.4f}"
             )
             
-            # Determine order side (mean reversion strategy)
-            # If price spiked UP, we SELL (bet on reversion down)
-            # If price dropped DOWN, we BUY (bet on reversion up)
-            order_side = "sell" if spike.change_pct > 0 else "buy"
+            # Determine order side
+            order_side = "buy" if spike.signal_type == "buy" else "sell"
             
             # Calculate position size
             quantity = self.config.TRADE_UNIT
@@ -277,24 +317,28 @@ class TradingBot:
                 market_id=spike.market_id,
                 side=order_side,
                 size=quantity,
-                price=spike.current_price,
+                price=spike.price,
                 order_type="limit"
             )
             
-            if order and hasattr(order, 'order_id'):
-                # Track in position manager
-                self.position_manager.add_position(
-                    order_id=order.order_id,
-                    market_id=spike.market_id,
-                    entry_price=spike.current_price,
-                    quantity=quantity,
-                    side=order_side
-                )
-                
-                self.logger.info(
-                    f"✅ Order placed: {order.order_id} | "
-                    f"{order_side.upper()} {quantity} @ ${spike.current_price:.4f}"
-                )
+            if order and order.get('success'):
+                order_details = order.get('order')
+                if order_details and hasattr(order_details, 'order_id'):
+                    # Track in position manager
+                    self.position_manager.add_position(
+                        order_id=order_details.order_id,
+                        market_id=spike.market_id,
+                        entry_price=spike.price,
+                        quantity=quantity,
+                        side=order_side
+                    )
+                    
+                    self.logger.info(
+                        f"✅ Order placed: {order_details.order_id} | "
+                        f"{order_side.upper()} {quantity} @ ${spike.price:.4f}"
+                    )
+                else:
+                    self.logger.warning(f"⚠️ Order submission did not return order_id for {spike.market_id}")
             else:
                 self.logger.warning(f"⚠️ Order submission failed for {spike.market_id}")
             
@@ -313,40 +357,43 @@ class TradingBot:
             )
             
             # Submit closing order
-            exit_order = await self.order_executor.submit_order(
+            exit_order_result = await self.order_executor.submit_order(
                 market_id=position.market_id,
                 side="sell" if position.side == "buy" else "buy",
                 size=position.quantity,
                 price=position.current_price,
                 order_type="market"  # Use market to ensure fill
             )
-            
-            # Calculate PnL
-            pnl = self.position_manager.calculate_pnl(
-                position=position,
-                exit_price=exit_order.filled_price
-            )
-            
-            # Remove from tracking
-            self.position_manager.remove_position(position.id)
-            
-            self.logger.info(
-                f"✓ Position closed. PnL: ${pnl:.2f}"
-            )
+
+            if exit_order_result and exit_order_result.get('success'):
+                exit_order = exit_order_result.get('order')
+                # Calculate PnL
+                pnl = self.position_manager.calculate_pnl(
+                    position=position,
+                    exit_price=exit_order.avg_fill_price if hasattr(exit_order, 'avg_fill_price') else position.current_price
+                )
+                
+                # Remove from tracking
+                self.position_manager.remove_position(position.id)
+                
+                self.logger.info(
+                    f"✓ Position closed. PnL: ${pnl:.2f}"
+                )
+            else:
+                self.logger.error(f"Exit order submission failed for position {position.id}")
             
         except Exception as e:
             self.logger.error(f"Exit execution failed: {e}", exc_info=True)
     
     async def run(self):
-        """Main bot loop with concurrent price updates, spike detection, and position management."""
+        """Main bot loop with concurrent execution of trading and position management."""
         try:
             # Initialize
             await self.initialize()
             
-            # Start all three loops concurrently
+            # Start all loops concurrently
             await asyncio.gather(
-                self.price_update_loop(),
-                self.spike_detection_loop(),
+                self.trade_execution_loop(),
                 self.position_management_loop(),
                 return_exceptions=True
             )
@@ -360,6 +407,17 @@ class TradingBot:
     async def shutdown(self):
         """Graceful shutdown"""
         self.running = False
+
+        # Save price history
+        self.logger.info("Saving price history...")
+        price_histories = self.strategy_manager.get_all_price_histories()
+        if price_histories:
+            try:
+                with open("data/price_history.json", "w") as f:
+                    json.dump(price_histories, f, indent=2)
+                self.logger.info("✅ Price history saved to data/price_history.json")
+            except Exception as e:
+                self.logger.error(f"Failed to save price history: {e}")
         
         # Close all positions
         positions = self.position_manager.get_active_positions()
@@ -479,71 +537,6 @@ class TradingBot:
         
         except Exception as e:
             self.logger.error(f"Position management error: {e}", exc_info=True)
-
-    async def should_trade_spike(self, market, spike) -> bool:
-        """
-        Enhanced pre-trade validation.
-        
-        Returns True if spike should be traded.
-        """
-        # 1. Risk manager check
-        risk_check = await self.risk_manager.can_trade_pre_submission(spike)
-        if not risk_check.passed:
-            self.logger.debug(
-                f"❌ Risk check failed for {spike.market_id}: {risk_check.reason}"
-            )
-            return False
-        
-        # 2. Market quality checks
-        # Check liquidity
-        if market.liquidity_usd < 0.10:
-            self.logger.debug(
-                f"❌ Low liquidity for {spike.market_id}: ${market.liquidity_usd:.2f}"
-            )
-            return False
-        
-        # Check spread
-        if market.best_ask_cents > 0 and market.best_bid_cents > 0:
-            spread_pct = (
-                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
-            )
-            if spread_pct > 0.30:  # 30% max spread
-                self.logger.debug(
-                    f"❌ Wide spread for {spike.market_id}: {spread_pct:.1%}"
-                )
-                return False
-        
-        # 3. Price history depth
-        history = self.spike_detector.price_history.get(market.market_id, [])
-        if len(history) < 20:
-            self.logger.debug(
-                f"❌ Insufficient history for {spike.market_id}: {len(history)} points"
-            )
-            return False
-        
-        # 4. Time to expiry
-        hours_to_close = market.time_to_expiry_seconds / 3600
-        if hours_to_close < 0.5:  # < 30 minutes
-            self.logger.debug(
-                f"❌ Too close to expiry for {spike.market_id}: {hours_to_close:.1f}h"
-            )
-            return False
-        
-        # 5. Spike quality check
-        if abs(spike.change_pct) > 0.30:  # > 30% move
-            self.logger.debug(
-                f"❌ Suspicious spike size for {spike.market_id}: {spike.change_pct:.1%}"
-            )
-            return False
-        
-        self.logger.info(
-            f"✅ Trade validation passed for {spike.market_id}: "
-            f"spike={spike.change_pct:.1%}, price=${market.price:.4f}, "
-            f"liquidity=${market.liquidity_usd:.2f}, spread_ok, history={len(history)}"
-        )
-        
-        return True
-
 
 
 # Entry point

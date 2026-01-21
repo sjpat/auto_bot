@@ -13,6 +13,7 @@ Run: pytest tests/test_risk_manager_critical.py -v
 """
 
 import pytest
+import asyncio
 from datetime import datetime, timedelta
 from src.trading.risk_manager import (
     AccountStatusMonitor,
@@ -99,66 +100,71 @@ class TestAccountStatusMonitor:
 class TestDailyLossLimit:
     """Test daily loss limit enforcement."""
     
-    @pytest.mark.asyncio
-    async def test_initialization(self):
+    def test_initialization(self):
         """Test daily limit initialization."""
-        limit = DailyLossLimit(max_daily_loss_pct=0.15)
-        
-        limit.reset_daily_limits(starting_balance=1000.0)
-        
-        assert limit.daily_start_balance == 1000.0
-        assert limit.trading_enabled is True
+        async def _test():
+            limit = DailyLossLimit(max_daily_loss_pct=0.15)
+            
+            limit.reset_daily_limits(starting_balance=1000.0)
+            
+            assert limit.daily_start_balance == 1000.0
+            assert limit.trading_enabled is True
+        asyncio.run(_test())
     
-    @pytest.mark.asyncio
-    async def test_no_loss_allows_trading(self):
+    def test_no_loss_allows_trading(self):
         """Test that no loss allows trading."""
-        limit = DailyLossLimit(max_daily_loss_pct=0.15)
-        limit.reset_daily_limits(starting_balance=1000.0)
-        
-        result = await limit.check_daily_loss_limit(current_balance=1000.0)
-        
-        assert result['exceeded'] is False
-        assert result['loss_dollars'] == 0
-        assert result['trading_enabled'] is True
+        async def _test():
+            limit = DailyLossLimit(max_daily_loss_pct=0.15)
+            limit.reset_daily_limits(starting_balance=1000.0)
+            
+            result = await limit.check_daily_loss_limit(current_balance=1000.0)
+            
+            assert result['exceeded'] is False
+            assert result['loss_dollars'] == 0
+            assert result['trading_enabled'] is True
+        asyncio.run(_test())
     
-    @pytest.mark.asyncio
-    async def test_small_loss_allows_trading(self):
+    def test_small_loss_allows_trading(self):
         """Test that loss under threshold allows trading."""
-        limit = DailyLossLimit(max_daily_loss_pct=0.15)
-        limit.reset_daily_limits(starting_balance=1000.0)
-        
-        # 10% loss (under 15% limit)
-        result = await limit.check_daily_loss_limit(current_balance=900.0)
-        
-        assert result['exceeded'] is False
-        assert result['loss_pct'] == 0.1
-        assert result['trading_enabled'] is True
+        async def _test():
+            limit = DailyLossLimit(max_daily_loss_pct=0.15)
+            limit.reset_daily_limits(starting_balance=1000.0)
+            
+            # 10% loss (under 15% limit)
+            result = await limit.check_daily_loss_limit(current_balance=900.0)
+            
+            assert result['exceeded'] is False
+            assert result['loss_pct'] == 0.1
+            assert result['trading_enabled'] is True
+        asyncio.run(_test())
     
-    @pytest.mark.asyncio
-    async def test_threshold_loss_halts_trading(self):
+    def test_threshold_loss_halts_trading(self):
         """Test that loss at threshold halts trading."""
-        limit = DailyLossLimit(max_daily_loss_pct=0.15)
-        limit.reset_daily_limits(starting_balance=1000.0)
-        
-        # Exactly 15% loss
-        result = await limit.check_daily_loss_limit(current_balance=850.0)
-        
-        assert result['exceeded'] is True
-        assert abs(result['loss_pct'] - 0.15) < 0.001
-        assert result['trading_enabled'] is False
+        async def _test():
+            limit = DailyLossLimit(max_daily_loss_pct=0.15)
+            limit.reset_daily_limits(starting_balance=1000.0)
+            
+            # Exactly 15% loss
+            result = await limit.check_daily_loss_limit(current_balance=850.0)
+            
+            assert result['exceeded'] is True
+            assert abs(result['loss_pct'] - 0.15) < 0.001
+            assert result['trading_enabled'] is False
+        asyncio.run(_test())
     
-    @pytest.mark.asyncio
-    async def test_excessive_loss_halts_trading(self):
+    def test_excessive_loss_halts_trading(self):
         """Test that excessive loss halts trading."""
-        limit = DailyLossLimit(max_daily_loss_pct=0.15)
-        limit.reset_daily_limits(starting_balance=1000.0)
-        
-        # 30% loss (way over 15% limit)
-        result = await limit.check_daily_loss_limit(current_balance=700.0)
-        
-        assert result['exceeded'] is True
-        assert result['loss_pct'] == 0.3
-        assert result['trading_enabled'] is False
+        async def _test():
+            limit = DailyLossLimit(max_daily_loss_pct=0.15)
+            limit.reset_daily_limits(starting_balance=1000.0)
+            
+            # 30% loss (way over 15% limit)
+            result = await limit.check_daily_loss_limit(current_balance=700.0)
+            
+            assert result['exceeded'] is True
+            assert result['loss_pct'] == 0.3
+            assert result['trading_enabled'] is False
+        asyncio.run(_test())
     
     def test_can_trade_reflects_enabled_status(self):
         """Test that can_trade() reflects enabled status."""
@@ -331,36 +337,38 @@ class TestSettlementTracker:
         assert 'pos_123' in tracker.settled_positions
         assert tracker.settled_positions['pos_123'] == 100.0
     
-    @pytest.mark.asyncio
-    async def test_pending_settlement_amount(self):
+    def test_pending_settlement_amount(self):
         """Test calculation of pending settlement amount."""
-        tracker = SettlementTracker()
-        
-        # Track settlement for future (2 days out)
-        future = datetime.now() + timedelta(days=2)
-        tracker.track_settlement('pos_1', 100.0, future)
-        tracker.track_settlement('pos_2', 50.0, future)
-        
-        pending = await tracker.get_pending_settlement_amount()
-        
-        assert pending == 150.0
+        async def _test():
+            tracker = SettlementTracker()
+            
+            # Track settlement for future (2 days out)
+            future = datetime.now() + timedelta(days=2)
+            tracker.track_settlement('pos_1', 100.0, future)
+            tracker.track_settlement('pos_2', 50.0, future)
+            
+            pending = await tracker.get_pending_settlement_amount()
+            
+            assert pending == 150.0
+        asyncio.run(_test())
     
-    @pytest.mark.asyncio
-    async def test_available_withdrawal_amount(self):
+    def test_available_withdrawal_amount(self):
         """Test calculation of available withdrawal amount."""
-        tracker = SettlementTracker()
-        
-        # Track settled position (already past settlement time)
-        past = datetime.now() - timedelta(days=5)
-        tracker.track_settlement('pos_settled', 200.0, past)
-        
-        # Also track pending position
-        future = datetime.now() + timedelta(days=2)
-        tracker.track_settlement('pos_pending', 100.0, future)
-        
-        available = await tracker.get_available_for_withdrawal()
-        
-        assert available == 200.0
+        async def _test():
+            tracker = SettlementTracker()
+            
+            # Track settled position (already past settlement time)
+            past = datetime.now() - timedelta(days=5)
+            tracker.track_settlement('pos_settled', 200.0, past)
+            
+            # Also track pending position
+            future = datetime.now() + timedelta(days=2)
+            tracker.track_settlement('pos_pending', 100.0, future)
+            
+            available = await tracker.get_available_for_withdrawal()
+            
+            assert available == 200.0
+        asyncio.run(_test())
     
     def test_settlement_status(self):
         """Test settlement status reporting."""

@@ -98,3 +98,5 @@ coverage.xml
 
 .python-version
 pyproject.toml
+backtest_results_*
+logs/
