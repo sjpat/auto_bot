@@ -3796,3 +3796,167 @@ TimeoutError
 2026-01-16 08:01:34 | INFO     | TradingBot | get_tradeable_markets:157 | Found 1000 open markets
 2026-01-16 08:01:36 | INFO     | TradingBot | run:317 | Bot shutting down
 2026-01-16 08:01:36 | INFO     | TradingBot | shutdown:334 | Bot shutdown complete
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:22:51
+2026-01-20 15:22:51 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:22:51 | WARNING  | TradingBot | __init__:66 | 💰 LIVE TRADING MODE: Orders will use REAL MONEY
+2026-01-20 15:22:51 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:22:52 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 15:22:52 | INFO     | TradingBot | initialize:104 | Account balance: $0.00
+2026-01-20 15:22:52 | ERROR    | TradingBot | initialize:120 | Initialization failed: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:22:52 | ERROR    | TradingBot | run:334 | Error in main loop: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 324, in run
+    await self.initialize()
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:22:52 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:22:52 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:22:52 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:22:52 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:24:51
+2026-01-20 15:24:51 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:24:51 | WARNING  | TradingBot | __init__:66 | 💰 LIVE TRADING MODE: Orders will use REAL MONEY
+2026-01-20 15:24:51 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:25:07 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:25:07 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:25:07 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:25:07 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:26:25
+2026-01-20 15:26:25 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:26:25 | WARNING  | TradingBot | __init__:66 | 💰 LIVE TRADING MODE: Orders will use REAL MONEY
+2026-01-20 15:26:25 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:26:25 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 15:26:25 | INFO     | TradingBot | initialize:104 | Account balance: $0.00
+2026-01-20 15:26:25 | ERROR    | TradingBot | initialize:120 | Initialization failed: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:26:25 | ERROR    | TradingBot | run:334 | Error in main loop: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 324, in run
+    await self.initialize()
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:26:25 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:26:25 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:26:25 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:26:25 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:27:20
+2026-01-20 15:27:20 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:27:20 | WARNING  | TradingBot | __init__:66 | 💰 LIVE TRADING MODE: Orders will use REAL MONEY
+2026-01-20 15:27:20 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:27:20 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 15:27:20 | INFO     | TradingBot | initialize:104 | Account balance: $0.00
+2026-01-20 15:27:20 | ERROR    | TradingBot | initialize:120 | Initialization failed: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:27:20 | ERROR    | TradingBot | run:334 | Error in main loop: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 324, in run
+    await self.initialize()
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:27:20 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:27:20 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:27:20 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:27:20 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:29:15
+2026-01-20 15:29:15 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:29:15 | WARNING  | TradingBot | __init__:66 | 💰 LIVE TRADING MODE: Orders will use REAL MONEY
+2026-01-20 15:29:15 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:29:15 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 15:29:16 | INFO     | TradingBot | initialize:104 | Account balance: $0.00
+2026-01-20 15:29:16 | ERROR    | TradingBot | initialize:120 | Initialization failed: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:29:16 | ERROR    | TradingBot | run:334 | Error in main loop: Insufficient balance: $0.00
+Traceback (most recent call last):
+  File "/home/shypat/Documents/auto_bot/main.py", line 324, in run
+    await self.initialize()
+  File "/home/shypat/Documents/auto_bot/main.py", line 107, in initialize
+    raise ValueError(f"Insufficient balance: ${balance:.2f}")
+ValueError: Insufficient balance: $0.00
+2026-01-20 15:29:16 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:29:16 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:29:16 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:29:16 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 15:29:49
+2026-01-20 15:29:49 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 15:29:49 | INFO     | TradingBot | __init__:64 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-20 15:29:49 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 15:29:49 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 15:29:49 | INFO     | TradingBot | initialize:104 | Account balance: $1000.00
+2026-01-20 15:29:49 | INFO     | TradingBot | initialize:111 | ✅ Daily risk limits initialized
+2026-01-20 15:29:49 | INFO     | TradingBot | initialize:115 | Loaded 91 markets
+2026-01-20 15:31:40 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 15:31:40 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 15:31:40 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 15:31:40 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 16:29:29
+2026-01-20 16:29:29 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 16:29:29 | INFO     | TradingBot | __init__:64 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-20 16:29:29 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 16:29:29 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 16:29:29 | INFO     | TradingBot | initialize:104 | Account balance: $1000.00
+2026-01-20 16:29:29 | INFO     | TradingBot | initialize:111 | ✅ Daily risk limits initialized
+2026-01-20 16:29:30 | INFO     | TradingBot | initialize:115 | Loaded 119 markets
+2026-01-20 16:33:41 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-20 16:33:41 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-20 16:33:41 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-20 16:33:41 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:129 | ================================================================================
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:130 | Logger initialized: TradingBot
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:131 | Log level: INFO
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:133 | Log file: logs/kalshi_demo.log
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:134 | Timestamp: 2026-01-20 16:34:00
+2026-01-20 16:34:00 | INFO     | TradingBot | setup_logger:135 | ================================================================================
+2026-01-20 16:34:00 | INFO     | TradingBot | __init__:64 | 📄 PAPER TRADING MODE: Orders will be simulated
+2026-01-20 16:34:00 | INFO     | TradingBot | initialize:96 | Initializing kalshi bot...
+2026-01-20 16:34:01 | INFO     | TradingBot | initialize:100 | ✅ API connection verified
+2026-01-20 16:34:01 | INFO     | TradingBot | initialize:104 | Account balance: $1000.00
+2026-01-20 16:34:01 | INFO     | TradingBot | initialize:111 | ✅ Daily risk limits initialized
+2026-01-20 16:34:01 | INFO     | TradingBot | initialize:115 | Loaded 131 markets
+2026-01-21 07:49:28 | INFO     | TradingBot | run:336 | Bot shutting down
+2026-01-21 07:49:28 | INFO     | TradingBot | shutdown:344 | Saving price history...
+2026-01-21 07:49:32 | INFO     | TradingBot | shutdown:350 | ✅ Price history saved to data/price_history.json
+2026-01-21 07:49:32 | INFO     | TradingBot | shutdown:364 | Bot shutdown complete

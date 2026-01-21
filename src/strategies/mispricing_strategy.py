@@ -41,6 +41,8 @@ class MispricingStrategy(BaseStrategy):
         self.min_confidence = config.get('MIN_CONFIDENCE', 0.6)
         self.max_holding_time = config.get('MAX_HOLDING_TIME', 3600 * 4)  # 4 hours
         self.min_liquidity_requirement = config.get('MIN_LIQUIDITY_REQUIREMENT', 200.0)
+        self.target_profit = config.get('TARGET_PROFIT_USD', 2.0)
+        self.stop_loss = config.get('TARGET_LOSS_USD', -1.5)
         
         # Pricing models
         self.pricing_models = PricingModels()
@@ -74,9 +76,6 @@ class MispricingStrategy(BaseStrategy):
             # Skip if not tradeable
             if not market.is_open or not market.is_liquid(min_liquidity=self.min_liquidity_requirement):
                 continue
-            
-            # Update price history
-            self._update_price_history(market)
             
             # Try multiple pricing methods
             fair_value = self._calculate_fair_value(market)
@@ -228,11 +227,11 @@ class MispricingStrategy(BaseStrategy):
         4. New information invalidates thesis
         """
         # 1. Profit target met
-        if position.unrealized_pnl >= 2.0:  # $2 profit
+        if position.unrealized_pnl >= self.target_profit:
             return "profit_target"
         
         # 2. Stop loss
-        if position.unrealized_pnl <= -1.5:  # $1.50 loss
+        if position.unrealized_pnl <= self.stop_loss:
             return "stop_loss"
         
         # 3. Time limit
@@ -273,4 +272,3 @@ class MispricingStrategy(BaseStrategy):
         })
         
         return base_stats
-

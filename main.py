@@ -191,10 +191,48 @@ class TradingBot:
 
     async def should_trade_signal(self, market, signal) -> bool:
         """Perform risk and quality checks before executing a trade."""
-        # This method can be expanded to include more checks.
-        # For now, it's a placeholder for the logic that was in should_trade_spike.
-        # You can add checks for liquidity, spread, time to expiry, etc. here.
-        self.logger.info(f"Performing risk check for signal on market {market.market_id}")
+        # 1. Risk manager check
+        # Create a mock spike object if signal doesn't have change_pct (compatibility)
+        class MockSpike:
+            def __init__(self, change_pct, market_id):
+                self.change_pct = change_pct
+                self.market_id = market_id
+        
+        spike_obj = MockSpike(
+            change_pct=signal.metadata.get('spike_magnitude', 0.0),
+            market_id=signal.market_id
+        )
+
+        risk_check = await self.risk_manager.can_trade_pre_submission(spike_obj)
+        if not risk_check.passed:
+            self.logger.debug(
+                f"❌ Risk check failed for {signal.market_id}: {risk_check.reason}"
+            )
+            return False
+        
+        # 2. Market quality checks
+        # Check liquidity
+        if market.liquidity_usd < self.config.MIN_LIQUIDITY_USD:
+            self.logger.debug(
+                f"❌ Low liquidity for {signal.market_id}: ${market.liquidity_usd:.2f}"
+            )
+            return False
+        
+        # Check spread
+        if market.best_ask_cents > 0 and market.best_bid_cents > 0:
+            spread_pct = (
+                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
+            )
+            if spread_pct > self.config.MAX_SPREAD_PCT:
+                self.logger.debug(
+                    f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
+                )
+                return False
+        
+        self.logger.info(
+            f"✅ Trade validation passed for {signal.market_id}: "
+            f"conf={signal.confidence:.1%}, price=${market.price:.4f}"
+        )
         return True
     
     async def execute_signal_trade(self, signal, market):
@@ -210,6 +248,16 @@ class TradingBot:
                 # Check all open positions
                 positions = self.position_manager.get_active_positions()
                 
+                # 1. Strategy-based exits (e.g. Mispricing convergence)
+                # We need to fetch current market data for these positions
+                if positions:
+                    # Note: In a real scenario, we might want to batch fetch these
+                    # For now, we rely on the fact that we likely have recent data or fetch individually
+                    # StrategyManager expects a dict of {market_id: Market}
+                    # We will skip this optimization for now and rely on PositionManager's internal checks
+                    # OR implement the strategy check if PositionManager doesn't cover it.
+                    pass
+                
                 for position in positions:
                     # Evaluate exit conditions
                     exit_decision = self.position_manager.evaluate_position(
@@ -221,6 +269,26 @@ class TradingBot:
                         await self._execute_exit(
                             position=position,
                             reason=exit_decision.reason
+                        )
+                        continue
+
+                    # Check Strategy Manager Exits (Parity with Backtest)
+                    # This allows strategies to signal exits (e.g. fair value reached)
+                    # We need to construct a minimal market map for the strategy
+                    try:
+                        market = await self.client.get_market(position.market_id)
+                        market_map = {position.market_id: market}
+                        exit_signals = self.strategy_manager.generate_exit_signals([position], market_map)
+                        
+                        if exit_signals:
+                            signal = exit_signals[0]
+                            await self._execute_exit(
+                                position=position,
+                                reason=signal.metadata.get('reason', 'strategy_exit')
+                            )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error checking strategy exit for {position.market_id}: {e}"
                         )
                 
                 await asyncio.sleep(self.config.POSITION_CHECK_INTERVAL)
@@ -469,71 +537,6 @@ class TradingBot:
         
         except Exception as e:
             self.logger.error(f"Position management error: {e}", exc_info=True)
-
-    async def should_trade_spike(self, market, spike) -> bool:
-        """
-        Enhanced pre-trade validation.
-        
-        Returns True if spike should be traded.
-        """
-        # 1. Risk manager check
-        risk_check = await self.risk_manager.can_trade_pre_submission(spike)
-        if not risk_check.passed:
-            self.logger.debug(
-                f"❌ Risk check failed for {spike.market_id}: {risk_check.reason}"
-            )
-            return False
-        
-        # 2. Market quality checks
-        # Check liquidity
-        if market.liquidity_usd < 0.10:
-            self.logger.debug(
-                f"❌ Low liquidity for {spike.market_id}: ${market.liquidity_usd:.2f}"
-            )
-            return False
-        
-        # Check spread
-        if market.best_ask_cents > 0 and market.best_bid_cents > 0:
-            spread_pct = (
-                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
-            )
-            if spread_pct > 0.30:  # 30% max spread
-                self.logger.debug(
-                    f"❌ Wide spread for {spike.market_id}: {spread_pct:.1%}"
-                )
-                return False
-        
-        # 3. Price history depth
-        history = self.spike_detector.price_history.get(market.market_id, [])
-        if len(history) < 20:
-            self.logger.debug(
-                f"❌ Insufficient history for {spike.market_id}: {len(history)} points"
-            )
-            return False
-        
-        # 4. Time to expiry
-        hours_to_close = market.time_to_expiry_seconds / 3600
-        if hours_to_close < 0.5:  # < 30 minutes
-            self.logger.debug(
-                f"❌ Too close to expiry for {spike.market_id}: {hours_to_close:.1f}h"
-            )
-            return False
-        
-        # 5. Spike quality check
-        if abs(spike.change_pct) > 0.30:  # > 30% move
-            self.logger.debug(
-                f"❌ Suspicious spike size for {spike.market_id}: {spike.change_pct:.1%}"
-            )
-            return False
-        
-        self.logger.info(
-            f"✅ Trade validation passed for {spike.market_id}: "
-            f"spike={spike.change_pct:.1%}, price=${market.price:.4f}, "
-            f"liquidity=${market.liquidity_usd:.2f}, spread_ok, history={len(history)}"
-        )
-        
-        return True
-
 
 
 # Entry point

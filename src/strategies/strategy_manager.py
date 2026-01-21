@@ -62,7 +62,9 @@ class StrategyManager:
                     'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MISPRICING', 0.60),
                     'MAX_HOLDING_TIME': getattr(config, 'MISPRICING_MAX_HOLDING_TIME', 14400),
                     'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50),
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT,
+                    'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
+                    'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5)
                 }
                 self.mispricing_strategy = MispricingStrategy(mispricing_config)
                 self.strategies.append(('mispricing', self.mispricing_strategy))

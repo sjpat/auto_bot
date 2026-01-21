@@ -19,16 +19,20 @@ class HistoricalPricePoint:
     volume: int
     liquidity: float
     market_id: str
+    expiry_timestamp: Optional[datetime] = None
     
     def to_dict(self):
-        return {
-            **asdict(self),
-            'timestamp': self.timestamp.isoformat()
-        }
+        data = asdict(self)
+        data['timestamp'] = self.timestamp.isoformat()
+        if self.expiry_timestamp:
+            data['expiry_timestamp'] = self.expiry_timestamp.isoformat()
+        return data
     
     @classmethod
     def from_dict(cls, data: dict):
         data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        if data.get('expiry_timestamp'):
+            data['expiry_timestamp'] = datetime.fromisoformat(data['expiry_timestamp'])
         return cls(**data)
 
 @dataclass
@@ -55,7 +59,8 @@ class HistoricalDataFetcher:
         self,
         market_id: str,
         start_ts: Optional[int] = None,
-        use_cache: bool = True
+        use_cache: bool = True,
+        market_expiry: Optional[datetime] = None
     ) -> List[HistoricalPricePoint]:
         """
         Fetch historical price data for a market.
@@ -64,6 +69,7 @@ class HistoricalDataFetcher:
             market_id: Kalshi market ticker
             start_ts: Optional timestamp to start from
             use_cache: Use cached data if available
+            market_expiry: Expiration time of the market
             
         Returns:
             List of historical price points
@@ -73,7 +79,13 @@ class HistoricalDataFetcher:
         # Check cache first
         if use_cache and cache_file.exists():
             self.logger.info(f"Loading cached history for {market_id}")
-            return self._load_from_cache(cache_file)
+            points = self._load_from_cache(cache_file)
+            # Backfill expiry if provided and missing
+            if market_expiry:
+                for p in points:
+                    if not p.expiry_timestamp:
+                        p.expiry_timestamp = market_expiry
+            return points
         
         try:
             self.logger.info(f"Fetching history for {market_id}")
@@ -95,7 +107,8 @@ class HistoricalDataFetcher:
                     yes_ask=point.get('yes_ask', 0) / 100.0,
                     volume=point.get('volume', 0),
                     liquidity=point.get('liquidity', 0) / 100.0,
-                    market_id=market_id
+                    market_id=market_id,
+                    expiry_timestamp=market_expiry
                 ))
             
             # Cache the data
@@ -299,9 +312,18 @@ class HistoricalDataFetcher:
         for i, market in enumerate(markets, 1):
             self.logger.info(f"Fetching {i}/{len(markets)}: {market.market_id}")
             
+            # Get expiry from market object
+            expiry = None
+            if hasattr(market, 'expiration_time') and market.expiration_time:
+                if isinstance(market.expiration_time, str):
+                    expiry = datetime.fromisoformat(market.expiration_time.replace('Z', '+00:00'))
+                elif isinstance(market.expiration_time, datetime):
+                    expiry = market.expiration_time
+            
             history = await self.fetch_market_history(
                 market_id=market.market_id,
-                use_cache=True
+                use_cache=True,
+                market_expiry=expiry
             )
             
             if history:
