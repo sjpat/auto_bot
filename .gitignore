@@ -19,7 +19,7 @@ var/
 .installed.cfg
 *.egg
 MANIFEST
-.venv
+.venv/
 venv/
 ENV/
 .env*
