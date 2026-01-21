@@ -95,3 +95,8 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+
+.python-version
+pyproject.toml
+backtest_results_*
+logs/
