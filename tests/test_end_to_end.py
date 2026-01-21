@@ -8,8 +8,10 @@ import asyncio
 
 from src.trading.spike_detector import SpikeDetector
 from src.trading.position_manager import PositionManager
+from src.trading.risk_manager import RiskManager
 from src.clients.kalshi_client import Market
 from src.config import Config
+from src.trading.fee_calculator import FeeCalculator
 
 
 class TestEndToEnd:
@@ -18,11 +20,12 @@ class TestEndToEnd:
     @pytest.fixture
     def config(self):
         """Create test config."""
-        config = Config()
+        config = Config(platform="kalshi")
         config.SPIKE_THRESHOLD = 0.04  # 4% spike threshold
         config.TARGET_GAIN_USD = 5.0
         config.TARGET_LOSS_USD = 2.0
         config.DAILY_LOSS_LIMIT_USD = 20.0
+        config.MAX_DAILY_LOSS_PCT = 0.01  # 1% limit to ensure simulated losses trigger halt
         config.POSITION_SIZE_USD = 10.0
         config.PRICE_HISTORY_SIZE = 100  # Add this
         return config
@@ -251,7 +254,7 @@ class TestEndToEnd:
             print("="*80)
         asyncio.run(_test())
     
-    def test_daily_loss_limit_halts_trading(self, config, position_manager):
+    def test_daily_loss_limit_halts_trading(self, config):
         """
         Scenario: Multiple losing trades hit daily loss limit.
         Expected: Trading halted, no new positions opened.
@@ -260,6 +263,24 @@ class TestEndToEnd:
             print("\n" + "="*80)
             print("TEST: Daily Loss Limit")
             print("="*80)
+            
+            fee_calc = FeeCalculator()
+            
+            # Setup Risk Manager
+            mock_client = Mock()
+            risk_manager = RiskManager(client=mock_client, config=config, fee_calculator=fee_calc)
+            await risk_manager.initialize_daily(starting_balance=1000.0)
+            
+            assert risk_manager.daily_loss_limit.max_daily_loss_pct == 0.01, f"Config mismatch: {risk_manager.daily_loss_limit.max_daily_loss_pct}"
+            print(f"   Risk Limit: {risk_manager.daily_loss_limit.max_daily_loss_pct:.1%}")
+            
+            # Setup Position Manager with Risk Manager
+            position_manager = PositionManager(
+                platform="kalshi", 
+                config=config, 
+                risk_manager=risk_manager
+            )
+            
             
             # Simulate multiple losing trades
             trades = []
@@ -270,38 +291,52 @@ class TestEndToEnd:
             for i in range(5):
                 market_id = f"LOSS-MARKET-{i:03d}"
                 
-                # Open position
+                # Open position (Long)
                 order_id = "TEST-ORDER-001"
                 position_manager.add_position(
                     order_id=order_id,
                     market_id=market_id,
                     entry_price=0.5,
                     quantity=100,
-                    side="sell"
+                    side="buy"
                 )
                 
                 # Get the position from the manager
                 position = position_manager.positions[order_id]
                 
                 # Close at loss
-                loss = -5.0  # $5 loss each
+                # Price drops from 0.50 to 0.40 = $10 loss per 100 contracts
                 final_pnl = position_manager.close_position(
                     position['id'],
-                    exit_price=0.55  # Adverse move
+                    exit_price=0.40  # Adverse move
                 )
                 
                 total_loss += final_pnl.get('net_pnl', final_pnl.get('pnl', 0))
+                
+                # Update Risk Manager with loss
+                # In production, this happens via balance checks or explicit updates
+                current_balance = 1000.0 + total_loss
+                status = await risk_manager.check_daily_loss(current_balance)
+                
                 trades.append((position['id'], final_pnl))
                 
-                print(f"   Trade {i+1}: ${final_pnl.get('net_pnl', final_pnl.get('pnl', 0)):.2f} | Total: ${total_loss:.2f}")
+                print(f"   Trade {i+1}: ${final_pnl.get('net_pnl', final_pnl.get('pnl', 0)):.2f} | Total: ${total_loss:.2f} | Loss: {status.get('loss_pct', 0):.2%}")
+                
+                if status.get('exceeded'):
+                    print("   ⚠️ Limit exceeded!")
+                    # Verify trading is disabled immediately
+                    if not risk_manager.daily_loss_limit.can_trade():
+                        print("   ✅ Trading disabled by RiskManager")
+            
+            # Ensure we generated enough loss to trigger the limit ($10)
+            assert total_loss < -15.0, f"Simulated loss {total_loss} insufficient to trigger limit"
             
             print(f"\n💸 Total losses: ${total_loss:.2f}")
-            if abs(total_loss) >= config.DAILY_LOSS_LIMIT_USD:
-                print(f"   ✅ Daily loss limit would be reached (${abs(total_loss):.2f})")
-            else:
-                print(f"   ℹ️  Daily loss (${abs(total_loss):.2f}) below limit")
             
-            print("   Note: Daily loss tracking handled by RiskManager in production")
+            # Verify Risk Manager actually halts trading
+            can_trade = await risk_manager.can_trade_pre_submission(Mock(change_pct=0.05))
+            assert can_trade.passed is False, "Risk Manager should block trading after limit hit"
+            print(f"   ✅ Risk Manager blocked trading: {can_trade.reason}")
             
             print("="*80)
         asyncio.run(_test())
