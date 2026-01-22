@@ -1,0 +1,19 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+venv/
+.env
+
+# Logs & Data
+logs/*
+!logs/.keep
+data/*
+!data/.keep
+
+# IDE
+.vscode
+.idea

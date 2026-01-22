@@ -1,4 +1,4 @@
-# test.py - Main execution file
+# main.py - Main execution file
 
 import asyncio
 import signal

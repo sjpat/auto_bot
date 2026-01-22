@@ -62,10 +62,10 @@ USER botuser
 # Health check (checks if bot is running)
 HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
     CMD python -c "import os; from datetime import datetime, timedelta; \
-        log_file='logs/kalshi_demo.log'; \
+        log_file='logs/bot.log'; \
         exit(0 if os.path.exists(log_file) and \
         (datetime.now() - datetime.fromtimestamp(os.path.getmtime(log_file))) < timedelta(minutes=5) \
         else 1)"
 
 # Default command (can be overridden)
-CMD ["python", "test.py", "kalshi"]
+CMD ["python", "main.py", "kalshi"]
