@@ -35,6 +35,7 @@ class MomentumStrategy(BaseStrategy):
         self.momentum_window = config.get('MOMENTUM_WINDOW', 6)  # Number of updates to look back
         self.momentum_threshold = config.get('MOMENTUM_THRESHOLD', 0.03)  # 3% move required
         self.min_confidence = config.get('MIN_CONFIDENCE', 0.65)
+        self.reversal_multiplier = config.get('MOMENTUM_REVERSAL_MULTIPLIER', 0.5)
         
         self.target_profit_usd = config.get('TARGET_PROFIT_USD', 3.0)
         self.target_loss_usd = config.get('TARGET_LOSS_USD', -1.5)
@@ -140,12 +141,12 @@ class MomentumStrategy(BaseStrategy):
                     
                     # If Long (betting on YES price increase)
                     if getattr(position, 'side', 'buy') == 'buy':
-                        if roc < -self.momentum_threshold * 0.5:  # Significant reversal (50% of entry threshold)
+                        if roc < -self.momentum_threshold * self.reversal_multiplier:
                             signals.append(self._create_exit(position, market.yes_price, "trend_reversal"))
                     
                     # If Short (betting on YES price decrease)
                     elif getattr(position, 'side', 'buy') == 'sell':
-                        if roc > self.momentum_threshold * 0.5:
+                        if roc > self.momentum_threshold * self.reversal_multiplier:
                             signals.append(self._create_exit(position, market.yes_price, "trend_reversal"))
                 
         return signals

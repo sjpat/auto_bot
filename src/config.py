@@ -65,6 +65,7 @@ class Config:
     MOMENTUM_WINDOW: int = int(os.getenv("MOMENTUM_WINDOW", "6"))
     MOMENTUM_THRESHOLD: float = float(os.getenv("MOMENTUM_THRESHOLD", "0.03"))
     MIN_CONFIDENCE_MOMENTUM: float = float(os.getenv("MIN_CONFIDENCE_MOMENTUM", "0.65"))
+    MOMENTUM_REVERSAL_MULTIPLIER: float = float(os.getenv("MOMENTUM_REVERSAL_MULTIPLIER", "0.5"))
 
     # ===== Volume Strategy Parameters =====
     VOLUME_SPIKE_THRESHOLD: float = float(os.getenv("VOLUME_SPIKE_THRESHOLD", "3.0"))  # 3x average

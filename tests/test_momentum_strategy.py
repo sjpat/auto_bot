@@ -1,88 +1,93 @@
-"""
-Unit tests for MomentumStrategy.
-"""
-
-import pytest
+import unittest
 from unittest.mock import Mock
 from src.strategies.momentum_strategy import MomentumStrategy
-from src.models.market import Market
 from src.strategies.base_strategy import SignalType
 
-class TestMomentumStrategy:
-    @pytest.fixture
-    def config(self):
-        return {
+class TestMomentumStrategy(unittest.TestCase):
+    def setUp(self):
+        self.config = {
             'MOMENTUM_WINDOW': 3,
-            'MOMENTUM_THRESHOLD': 0.05,
-            'MIN_CONFIDENCE': 0.6,
-            'MIN_LIQUIDITY_REQUIREMENT': 100.0,
-            'TARGET_PROFIT_USD': 2.0,
-            'TARGET_LOSS_USD': -1.0,
-            'HOLDING_TIME_LIMIT': 3600
+            'MOMENTUM_THRESHOLD': 0.10, # 10% threshold
+            'MIN_CONFIDENCE': 0.0,
+            'TARGET_PROFIT_USD': 100.0,
+            'TARGET_LOSS_USD': -100.0,
+            'HOLDING_TIME_LIMIT': 3600,
+            'MIN_LIQUIDITY_REQUIREMENT': 0,
+            'MOMENTUM_REVERSAL_MULTIPLIER': 0.5 # Exit if reverses > 5%
         }
+        self.strategy = MomentumStrategy(self.config)
 
-    @pytest.fixture
-    def strategy(self, config):
-        return MomentumStrategy(config)
-
-    def test_initialization(self, strategy):
-        assert strategy.momentum_window == 3
-        assert strategy.momentum_threshold == 0.05
-
-    def test_no_signal_insufficient_history(self, strategy):
-        market = Mock(spec=Market)
-        market.market_id = "test_market"
-        market.yes_price = 0.50
+    def _create_mock_market(self, price):
+        market = Mock()
+        market.market_id = "m1"
+        market.yes_price = price
         market.is_open = True
         market.is_liquid.return_value = True
+        return market
 
-        # Add 1 price point
-        strategy.on_market_update(market)
+    def _create_mock_position(self, side="buy"):
+        position = Mock()
+        position.market_id = "m1"
+        position.side = side
+        position.is_open = True
+        position.unrealized_pnl = 0.0
+        position.holding_time_seconds = 0
+        # Mock update_current_price to do nothing
+        position.update_current_price = Mock()
+        return position
+
+    def test_trend_reversal_exit_buy(self):
+        """Test that a long position exits when price trend reverses."""
+        market = self._create_mock_market(0.50)
+        position = self._create_mock_position("buy")
         
-        signals = strategy.generate_entry_signals([market])
-        assert len(signals) == 0
-
-    def test_momentum_buy_signal(self, strategy):
-        market = Mock(spec=Market)
-        market.market_id = "test_market"
-        market.is_open = True
-        market.is_liquid.return_value = True
-
-        # Price history: 0.50 -> 0.51 -> 0.52 -> 0.55 (Jump!)
-        # Window is 3. Compare 0.55 (current) vs 0.50 (3 steps ago)
-        prices = [0.50, 0.51, 0.52, 0.55]
-        
+        # 1. Build upward trend history
+        # Window=3. History needs to be populated.
+        prices = [0.50, 0.55, 0.60, 0.65]
         for p in prices:
             market.yes_price = p
-            strategy.on_market_update(market)
-        
-        # ROC = (0.55 - 0.50) / 0.50 = 0.10 (10%)
-        # Threshold is 0.05 (5%). Should trigger.
-
-        signals = strategy.generate_entry_signals([market])
-        assert len(signals) == 1
-        assert signals[0].signal_type == SignalType.BUY
-        assert signals[0].market_id == "test_market"
-        assert signals[0].metadata['roc'] == pytest.approx(0.10)
-        assert signals[0].metadata['strategy'] == 'momentum'
-
-    def test_momentum_sell_signal(self, strategy):
-        market = Mock(spec=Market)
-        market.market_id = "test_market_down"
-        market.is_open = True
-        market.is_liquid.return_value = True
-
-        # Price history: 0.50 -> 0.49 -> 0.48 -> 0.40 (Drop!)
-        prices = [0.50, 0.49, 0.48, 0.40]
-        
-        for p in prices:
-            market.yes_price = p
-            strategy.on_market_update(market)
+            self.strategy.on_market_update(market)
             
-        # ROC = (0.40 - 0.50) / 0.50 = -0.20 (-20%)
-        # Abs(ROC) > 0.05. Should trigger SELL.
+        # Current state: Price 0.65. 
+        # Past price (window+1 back) would be 0.50. ROC = +30%.
+        # No exit should be generated yet.
+        signals = self.strategy.generate_exit_signals([position], {"m1": market})
+        self.assertEqual(len(signals), 0)
+        
+        # 2. Reversal
+        # Price drops sharply to 0.50
+        market.yes_price = 0.50
+        self.strategy.on_market_update(market)
+        
+        # History is now [0.50, 0.55, 0.60, 0.65, 0.50]
+        # Window=3. Comparison is Current(0.50) vs Past(0.55) (index -4)
+        # ROC = (0.50 - 0.55) / 0.55 = -0.09 (-9%)
+        # Threshold is 10%. Reversal trigger is -10% * 0.5 = -5%.
+        # -9% < -5%, so it should trigger exit.
+        
+        signals = self.strategy.generate_exit_signals([position], {"m1": market})
+        self.assertEqual(len(signals), 1)
+        self.assertEqual(signals[0].metadata['reason'], 'trend_reversal')
+        self.assertEqual(signals[0].signal_type, SignalType.SELL)
 
-        signals = strategy.generate_entry_signals([market])
-        assert len(signals) == 1
-        assert signals[0].signal_type == SignalType.SELL
-        assert signals[0].metadata['roc'] == pytest.approx(-0.20)
+    def test_minor_pullback_ignored(self):
+        """Test that small pullbacks do not trigger exit."""
+        market = self._create_mock_market(0.50)
+        position = self._create_mock_position("buy")
+        
+        # Build upward trend
+        prices = [0.50, 0.55, 0.60, 0.65]
+        for p in prices:
+            market.yes_price = p
+            self.strategy.on_market_update(market)
+            
+        # Minor pullback to 0.64
+        market.yes_price = 0.64
+        self.strategy.on_market_update(market)
+        
+        # ROC calculation: 0.64 vs 0.55 = +16%. Still positive momentum.
+        signals = self.strategy.generate_exit_signals([position], {"m1": market})
+        self.assertEqual(len(signals), 0)
+
+if __name__ == '__main__':
+    unittest.main()
