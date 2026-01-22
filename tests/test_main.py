@@ -42,7 +42,8 @@ class TestTradingBot:
              patch('main.PositionManager'), \
              patch('main.RiskManager'), \
              patch('main.FeeCalculator'), \
-             patch('main.MarketFilter'):
+             patch('main.MarketFilter'), \
+             patch('main.NotificationManager'):
             
             bot = TradingBot(platform="kalshi")
             
@@ -58,6 +59,12 @@ class TestTradingBot:
             
             # Mock order executor
             bot.order_executor.submit_order = AsyncMock()
+            
+            # Mock notification manager methods to be awaitable
+            bot.notification_manager.send_message = AsyncMock()
+            bot.notification_manager.send_trade_alert = AsyncMock()
+            bot.notification_manager.send_exit_alert = AsyncMock()
+            bot.notification_manager.send_error = AsyncMock()
             
             return bot
 
@@ -181,4 +188,56 @@ class TestTradingBot:
             assert call_args['market_id'] == "test_market"
             assert call_args['side'] == "buy"
             assert call_args['price'] == 0.50
+        asyncio.run(_test())
+
+    def test_volume_signal_processing(self, bot):
+        """Test that volume strategy signals are processed correctly."""
+        async def _test():
+            # Setup Market
+            market = Mock()
+            market.liquidity_usd = 1000.0
+            market.best_ask_cents = 51
+            market.best_bid_cents = 49
+            market.last_price_cents = 50
+            market.price = 0.50
+            
+            # Setup Signal from Volume Strategy
+            signal = Mock(spec=Signal)
+            signal.market_id = "test_market"
+            signal.signal_type = SignalType.BUY
+            signal.confidence = 0.8
+            signal.price = 0.50
+            signal.metadata = {
+                'strategy': 'volume_spike',
+                'vol_ratio': 5.0,
+                'spike_magnitude': 0.02
+            }
+            
+            # Mock risk check pass
+            risk_result = Mock()
+            risk_result.passed = True
+            bot.risk_manager.can_trade_pre_submission.return_value = risk_result
+            
+            # Mock successful order submission
+            bot.order_executor.submit_order.return_value = {
+                'success': True,
+                'order': Mock(order_id="vol_123")
+            }
+            
+            # Test should_trade_signal
+            should_trade = await bot.should_trade_signal(market, signal)
+            assert should_trade is True
+            
+            # Test execute_signal_trade
+            await bot.execute_signal_trade(signal, market)
+            
+            # Verify order submission
+            bot.order_executor.submit_order.assert_called_once()
+            call_args = bot.order_executor.submit_order.call_args[1]
+            assert call_args['market_id'] == "test_market"
+            assert call_args['side'] == "buy"
+            
+            # Verify position tracking
+            bot.position_manager.add_position.assert_called_once()
+            
         asyncio.run(_test())

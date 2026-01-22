@@ -1,0 +1,17 @@
+[Unit]
+Description=Kalshi Trading Bot
+After=network.target
+
+[Service]
+Type=simple
+User=shypat
+WorkingDirectory=/home/shypat/Documents/auto_bot
+ExecStart=/usr/bin/python3 main.py kalshi
+Restart=always
+RestartSec=10
+EnvironmentFile=/home/shypat/Documents/auto_bot/.env
+StandardOutput=append:/home/shypat/Documents/auto_bot/logs/service.log
+StandardError=append:/home/shypat/Documents/auto_bot/logs/service_error.log
+
+[Install]
+WantedBy=multi-user.target

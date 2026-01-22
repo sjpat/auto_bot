@@ -18,6 +18,7 @@ from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
 from src.trading.fee_calculator import FeeCalculator
 from src.trading.market_filter import MarketFilter
+from src.notification_manager import NotificationManager
 
 
 class TradingBot:
@@ -86,13 +87,25 @@ class TradingBot:
             config=self.config,
             fee_calculator=self.fee_calculator
         )
+        
+        # Initialize Notifications
+        self.notification_manager = NotificationManager(config=self.config)
 
         self.loop_count = 0
         self.running = False
+        
+        # Health monitoring
+        self.last_markets_found_ts = datetime.now()
+        self.last_alert_ts = None
+        self.consecutive_errors = 0
+        self.daily_pnl = 0.0
+        self.starting_balance = 0.0
+        self.loss_warning_sent = False
     
     async def initialize(self):
         try:
             self.logger.info(f"Initializing {self.platform} bot...")
+            self.logger.info(f"Environment: {'DEMO' if self.config.KALSHI_DEMO else 'PRODUCTION'}")
             
             # Verify API connection
             await self.client.verify_connection()
@@ -101,6 +114,7 @@ class TradingBot:
             # Check balance
             balance = await self.client.get_balance()
             self.logger.info(f"Account balance: ${balance:.2f}")
+            self.starting_balance = balance
             
             if balance < self.config.MIN_ACCOUNT_BALANCE:
                 raise ValueError(f"Insufficient balance: ${balance:.2f}")
@@ -113,6 +127,7 @@ class TradingBot:
             markets = await self.client.get_markets(status="open", filter_untradeable=False)
             self.logger.info(f"Loaded {len(markets)} markets")
             
+            await self.notification_manager.send_message(f"🤖 *Bot Started* ({self.platform})\nBalance: `${balance:.2f}`")
             self.running = True
             
         except Exception as e:
@@ -133,8 +148,22 @@ class TradingBot:
 
                 if not all_markets:
                     self.logger.warning("No open markets found.")
+                    
+                    # Alert if no markets found for extended period (e.g. 12 hours)
+                    time_since_found = datetime.now() - self.last_markets_found_ts
+                    if time_since_found.total_seconds() > 12 * 3600:
+                        # Throttle alerts to once every 6 hours to avoid spam
+                        if not self.last_alert_ts or (datetime.now() - self.last_alert_ts).total_seconds() > 6 * 3600:
+                            await self.notification_manager.send_message(
+                                f"⚠️ *Market Data Alert*\nNo open markets found for {time_since_found.total_seconds()/3600:.1f} hours."
+                            )
+                            self.last_alert_ts = datetime.now()
+                    
                     await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
                     continue
+                
+                # Update heartbeat on success
+                self.last_markets_found_ts = datetime.now()
 
                 # 2. Update price history for all markets
                 for market in all_markets:
@@ -181,9 +210,15 @@ class TradingBot:
                         f"({len(tradeable_markets)} tradeable, {len(all_markets)} total)"
                     )
 
+                # Reset error counter on successful iteration
+                self.consecutive_errors = 0
                 await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
 
             except Exception as e:
+                self.consecutive_errors += 1
+                if self.consecutive_errors == 10:
+                    await self.notification_manager.send_error("⚠️ *Unstable Bot Alert*\nEncountered 10 consecutive errors in execution loop.")
+                
                 self.logger.error(f"Error in trade execution loop: {e}", exc_info=True)
                 await asyncio.sleep(5)
 
@@ -343,6 +378,15 @@ class TradingBot:
                         f"✅ Order placed: {order_details.order_id} | "
                         f"{order_side.upper()} {quantity} @ ${spike.price:.4f}"
                     )
+                    
+                    # Send Notification
+                    await self.notification_manager.send_trade_alert(
+                        market_id=spike.market_id,
+                        side=order_side,
+                        price=spike.price,
+                        quantity=quantity,
+                        strategy=spike.metadata.get('strategy', 'unknown')
+                    )
                 else:
                     self.logger.warning(f"⚠️ Order submission did not return order_id for {spike.market_id}")
             else:
@@ -382,8 +426,26 @@ class TradingBot:
                 # Remove from tracking
                 self.position_manager.remove_position(position.id)
                 
+                # Track Daily P&L for alerts
+                self.daily_pnl += pnl
+                if self.starting_balance > 0:
+                    max_loss_usd = self.starting_balance * self.config.MAX_DAILY_LOSS_PCT
+                    if self.daily_pnl <= -(max_loss_usd * 0.8) and not self.loss_warning_sent:
+                        await self.notification_manager.send_message(
+                            f"⚠️ *Risk Warning*\nDaily P&L (${self.daily_pnl:.2f}) has reached 80% of daily loss limit (${max_loss_usd:.2f})."
+                        )
+                        self.loss_warning_sent = True
+                
                 self.logger.info(
                     f"✓ Position closed. PnL: ${pnl:.2f}"
+                )
+                
+                # Send Notification
+                await self.notification_manager.send_exit_alert(
+                    market_id=position.market_id,
+                    pnl=pnl,
+                    reason=reason,
+                    return_pct=position.return_pct
                 )
             else:
                 self.logger.error(f"Exit order submission failed for position {position.id}")
@@ -397,6 +459,11 @@ class TradingBot:
             # Initialize
             await self.initialize()
             
+            # Register signal handlers for graceful shutdown
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
+            
             # Start all loops concurrently
             await asyncio.gather(
                 self.trade_execution_loop(),
@@ -406,6 +473,7 @@ class TradingBot:
             
         except Exception as e:
             self.logger.error(f"Error in main loop: {e}", exc_info=True)
+            await self.notification_manager.send_error(str(e))
         finally:
             self.logger.info("Bot shutting down")
             await self.shutdown()
@@ -435,6 +503,7 @@ class TradingBot:
         
         # Cleanup
         await self.client.close()
+        await self.notification_manager.send_message("🛑 *Bot Shutdown Complete*")
         self.logger.info("Bot shutdown complete")
         
     async def evaluate_entry_opportunity(self, market, entry_price, contracts):

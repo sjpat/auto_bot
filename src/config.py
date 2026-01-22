@@ -59,11 +59,16 @@ class Config:
     ENABLE_SPIKE_STRATEGY: bool = os.getenv("ENABLE_SPIKE_STRATEGY", "true").lower() == "true"
     ENABLE_MISPRICING_STRATEGY: bool = os.getenv("ENABLE_MISPRICING_STRATEGY", "true").lower() == "true"
     ENABLE_MOMENTUM_STRATEGY: bool = os.getenv("ENABLE_MOMENTUM_STRATEGY", "false").lower() == "true"
+    ENABLE_VOLUME_STRATEGY: bool = os.getenv("ENABLE_VOLUME_STRATEGY", "false").lower() == "true"
 
     # ===== Momentum Strategy Parameters =====
     MOMENTUM_WINDOW: int = int(os.getenv("MOMENTUM_WINDOW", "6"))
     MOMENTUM_THRESHOLD: float = float(os.getenv("MOMENTUM_THRESHOLD", "0.03"))
     MIN_CONFIDENCE_MOMENTUM: float = float(os.getenv("MIN_CONFIDENCE_MOMENTUM", "0.65"))
+
+    # ===== Volume Strategy Parameters =====
+    VOLUME_SPIKE_THRESHOLD: float = float(os.getenv("VOLUME_SPIKE_THRESHOLD", "3.0"))  # 3x average
+    MIN_VOLUME_FOR_STRATEGY: int = int(os.getenv("MIN_VOLUME_FOR_STRATEGY", "100"))
 
     # ===== Trading Parameters =====
     TRADE_UNIT: int = int(float(os.getenv("TRADE_UNIT", "50")))
@@ -112,6 +117,10 @@ class Config:
         os.getenv("MAX_ORDER_LATENCY_SECONDS", "5")
     )
     MAX_BACKOFF_SECONDS: int = int(os.getenv("MAX_BACKOFF_SECONDS", "1"))
+
+    # ===== Notifications =====
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
 
 
     # ===== Operational =====

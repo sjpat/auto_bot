@@ -296,6 +296,41 @@ def generate_march_madness_upset():
         
     return prices
 
+def generate_volume_spike():
+    """
+    Simulate a 'Smart Money' volume spike.
+    Price moves moderately, but volume explodes (5x average).
+    """
+    base_time = datetime(2025, 7, 10, 10, 0, 0)
+    prices = []
+    cumulative_volume = 10000
+    
+    # Quiet period (Low volume)
+    current_price = 0.50
+    for i in range(15):
+        cumulative_volume += random.randint(100, 500) # ~300 avg tick volume
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price + random.uniform(-0.002, 0.002),
+            'liquidity': 20000,
+            'volume': cumulative_volume
+        })
+        
+    # VOLUME SPIKE! (Smart Money enters)
+    # Volume jumps by 2000 in one tick (vs 300 avg) -> ~6.6x spike
+    base_time = base_time + timedelta(minutes=15)
+    for i in range(5):
+        cumulative_volume += random.randint(2000, 3000) 
+        current_price += 0.01 # Price starts moving up
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': current_price,
+            'liquidity': 50000, # Liquidity also increases
+            'volume': cumulative_volume
+        })
+        
+    return prices
+
 def main():
     """Generate test dataset with multiple volatile markets"""
     
@@ -311,6 +346,7 @@ def main():
         'TECH-EARNINGS': generate_earnings_surprise(),
         'MOMENTUM-TEST': generate_sustained_momentum(),
         'MARCH-MADNESS-UPSET': generate_march_madness_upset(),
+        'VOLUME-SPIKE-TEST': generate_volume_spike(),
     }
     
     # Save to file

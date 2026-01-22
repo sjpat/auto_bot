@@ -10,6 +10,7 @@ from src.strategies.momentum_strategy import MomentumStrategy
 from src.strategies.base_strategy import Signal
 from src.models.market import Market
 from src.models.position import Position
+from src.strategies.volume_strategy import VolumeStrategy
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,8 @@ class StrategyManager:
         
         # Track which strategy opened each position
         self.position_strategies: Dict[str, str] = {}  # position_id -> strategy_name
-        
+        self.volume_strategy = VolumeStrategy(config)
+
         # Initialize Spike Strategy
         if getattr(config, 'ENABLE_SPIKE_STRATEGY', True):
             try:
@@ -111,7 +113,12 @@ class StrategyManager:
             Ranked list of best opportunities across all strategies
         """
         all_signals = []
+        volume_signals = self.volume_strategy.generate_entry_signals(markets)
+        all_signals.extend(volume_signals)
         
+        if volume_signals:
+            self.logger.info(f"📊 VOLUME: {len(volume_signals)} signals generated")
+
         for strategy_name, strategy in self.strategies:
             try:
                 signals = strategy.generate_entry_signals(markets)
@@ -198,6 +205,8 @@ class StrategyManager:
         
         Both strategies need price history for their logic.
         """
+        self.volume_strategy.on_market_update(market)
+
         for strategy_name, strategy in self.strategies:
             try:
                 strategy.on_market_update(market)
@@ -283,9 +292,13 @@ class StrategyManager:
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics from all strategies."""
         stats = {
-            'enabled_strategies': len(self.strategies),
+            'enabled_strategies': len(self.strategies) + (1 if self.volume_strategy.enabled else 0),
             'strategies': {}
         }
+        
+        # Add Volume Strategy stats
+        if self.volume_strategy.enabled:
+            stats['strategies']['volume'] = self.volume_strategy.get_statistics()
         
         for strategy_name, strategy in self.strategies:
             try:

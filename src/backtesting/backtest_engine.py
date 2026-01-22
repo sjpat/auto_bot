@@ -223,6 +223,11 @@ class BacktestMarketAdapter:
         return self.price_point.ask
     
     @property
+    def volume_24h(self) -> float:
+        """Get 24h volume"""
+        return self.price_point.volume_24h or 0.0
+    
+    @property
     def spread_bps(self) -> float:
         """Calculate spread in basis points"""
         if self.bid is None or self.ask is None:

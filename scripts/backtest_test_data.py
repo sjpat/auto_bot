@@ -112,6 +112,11 @@ async def main():
     live_config.MOMENTUM_WINDOW = 6
     live_config.MOMENTUM_THRESHOLD = 0.03
     
+    # Enable Volume Strategy for backtest
+    live_config.ENABLE_VOLUME_STRATEGY = True
+    live_config.VOLUME_SPIKE_THRESHOLD = 3.0
+    live_config.MIN_VOLUME_FOR_STRATEGY = 100
+    
     strategy_manager = StrategyManager(config=live_config)
     risk_manager = RiskManager(client=None, config=live_config)
     fee_calculator = FeeCalculator()
@@ -140,8 +145,8 @@ async def main():
         SPIKE_THRESHOLD=0.05,  # Lowered slightly to catch more valid moves
         
         # Exit targets (Wider stops, higher targets)
-        TARGET_PROFIT_USD=30.00,  # Scaled up for larger position size
-        TARGET_LOSS_USD=-15.00,   # Wider stop to prevent noise outs
+        TARGET_PROFIT_USD=40.00,  # Scaled up for larger position size
+        TARGET_LOSS_USD=-5.00,   # Wider stop to prevent noise outs
         
         # Trailing Stop
         USE_TRAILING_STOP=True,
@@ -238,17 +243,18 @@ async def main():
     # Trade log (top trades)
     if results.trades:
         print(f"\n📋 Trade Log (First 10 trades):")
-        print(f"   {'Market':<15} {'Side':<6} {'Entry':<8} {'Exit':<8} {'P&L':<10} {'Reason':<20}")
-        print(f"   {'-'*80}")
+        print(f"   {'Market':<20} {'Side':<6} {'Entry':<8} {'Exit':<8} {'P&L':<10} {'Strategy':<15} {'Reason':<20}")
+        print(f"   {'-'*95}")
         
         for i, trade in enumerate(results.trades[:10]):
             side = trade.side.value if hasattr(trade.side, 'value') else str(trade.side)
             entry = f"${trade.entry_price:.4f}"
             exit_price = f"${trade.exit_price:.4f}" if trade.exit_price else "—"
             pnl = f"${trade.pnl:+.2f}"
+            strategy = trade.metadata.get('strategy', 'unknown')[:15]
             reason = trade.exit_reason or "open"
             
-            print(f"   {trade.market_id:<15} {side:<6} {entry:<8} {exit_price:<8} {pnl:<10} {reason:<20}")
+            print(f"   {trade.market_id:<20} {side:<6} {entry:<8} {exit_price:<8} {pnl:<10} {strategy:<15} {reason:<20}")
         
         if len(results.trades) > 10:
             print(f"   ... and {len(results.trades) - 10} more trades")
