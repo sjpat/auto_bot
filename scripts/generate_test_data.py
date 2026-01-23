@@ -331,6 +331,79 @@ def generate_volume_spike():
         
     return prices
 
+def generate_correlation_market_a():
+    """
+    Market A for correlation test (Group: CORRELATION).
+    Price ~0.65 ($325 cost). Spikes early.
+    """
+    base_time = datetime(2025, 8, 1, 12, 0, 0)
+    prices = []
+    
+    # Stable
+    for i in range(10):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': 0.65 + random.uniform(-0.005, 0.005),
+            'liquidity': 50000,
+            'volume': 10000
+        })
+    
+    # Spike
+    for i in range(5):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=10+i)).isoformat(),
+            'price': 0.68 + (i * 0.02), 
+            'liquidity': 60000,
+            'volume': 20000
+        })
+        
+    # Hold
+    for i in range(15):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=15+i)).isoformat(),
+            'price': 0.78,
+            'liquidity': 50000,
+            'volume': 10000
+        })
+    return prices
+
+def generate_correlation_market_b():
+    """
+    Market B for correlation test (Group: CORRELATION).
+    Price ~0.65 ($325 cost). Spikes later.
+    Should be blocked if A is held and limit is $600 (Total $650 > $600).
+    """
+    base_time = datetime(2025, 8, 1, 12, 0, 0)
+    prices = []
+    
+    # Stable longer
+    for i in range(15):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=i)).isoformat(),
+            'price': 0.65 + random.uniform(-0.005, 0.005),
+            'liquidity': 50000,
+            'volume': 10000
+        })
+    
+    # Spike
+    for i in range(5):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=15+i)).isoformat(),
+            'price': 0.68 + (i * 0.02),
+            'liquidity': 60000,
+            'volume': 20000
+        })
+        
+    # Hold
+    for i in range(10):
+        prices.append({
+            'timestamp': (base_time + timedelta(minutes=20+i)).isoformat(),
+            'price': 0.78,
+            'liquidity': 50000,
+            'volume': 10000
+        })
+    return prices
+
 def main():
     """Generate test dataset with multiple volatile markets"""
     
@@ -347,6 +420,8 @@ def main():
         'MOMENTUM-TEST': generate_sustained_momentum(),
         'MARCH-MADNESS-UPSET': generate_march_madness_upset(),
         'VOLUME-SPIKE-TEST': generate_volume_spike(),
+        'CORRELATION-A': generate_correlation_market_a(),
+        'CORRELATION-B': generate_correlation_market_b(),
     }
     
     # Save to file

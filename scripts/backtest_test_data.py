@@ -165,6 +165,7 @@ async def main():
         
         # Risk management
         MAX_DAILY_LOSS_PCT=0.15,  # 15% daily loss limit ($1,500 on $10k)
+        MAX_EVENT_EXPOSURE_USD=600.0, # Limit exposure (allows 1 trade of 500@0.65, blocks 2nd)
     )
     
     print(f"\n💰 Backtest Config (Parity-Aligned):")

@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
+from src.trading.correlation_manager import CorrelationManager
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ class BacktestConfig:
     # Risk management
     MAX_DAILY_LOSS_PCT: float = 0.15  # 15% daily loss limit
     MAX_DAILY_LOSS_USD: Optional[float] = None  # Calculated from starting_balance
+    MAX_EVENT_EXPOSURE_USD: float = 200.0  # Max exposure per event group
     
     # Trailing Stop
     USE_TRAILING_STOP: bool = False
@@ -306,6 +308,9 @@ class BacktestEngine:
         self.current_date = None
         self.daily_pnl_dict: Dict[str, float] = {}  # Fixed: Dict instead of float
         self.session_pnl = 0.0
+        
+        # Initialize Correlation Manager (Engine acts as PositionManager)
+        self.correlation_manager = CorrelationManager(config, self)
         
         logger.info(f"BacktestEngine initialized with balance: ${self.balance:,.2f}")
 
@@ -563,6 +568,16 @@ class BacktestEngine:
         entry_fees = self.fee_calculator.kalshi_fee(self.config.TRADE_UNIT, price_point.yes_price)
         total_cost = entry_cost + entry_fees
         
+        # Check correlation risk
+        corr_passed, corr_reason = self.correlation_manager.check_exposure(market_id, entry_cost)
+        if not corr_passed:
+            results.signals_rejected += 1
+            results.rejection_reasons["correlation_limit"] = (
+                results.rejection_reasons.get("correlation_limit", 0) + 1
+            )
+            logger.info(f"Signal rejected by correlation manager: {corr_reason}")
+            return
+
         # Check balance
         if total_cost > self.balance:
             results.signals_rejected += 1
@@ -777,6 +792,10 @@ class BacktestEngine:
         results.trades = self.closed_trades
         
         logger.info(f"Results calculated: {results.total_trades} trades, {results.win_rate:.1f}% win rate")
+
+    def get_active_positions(self) -> List[Trade]:
+        """Interface for CorrelationManager to access open positions."""
+        return list(self.open_trades.values())
 
 
 # Example usage

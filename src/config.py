@@ -110,6 +110,7 @@ class Config:
     MAX_CONCURRENT_POSITIONS: int = int(os.getenv("MAX_CONCURRENT_POSITIONS", "3"))
     MAX_DAILY_TRADES: int = int(os.getenv("MAX_DAILY_TRADES", "20"))
     MIN_SECONDS_BETWEEN_TRADES: int = int(os.getenv("MIN_SECONDS_BETWEEN_TRADES", "2"))
+    MAX_EVENT_EXPOSURE_USD: float = float(os.getenv("MAX_EVENT_EXPOSURE_USD", "200.0"))
 
     VALID_PRICE_MIN: float = float(os.getenv("VALID_PRICE_MIN", "0.05"))
     VALID_PRICE_MAX: float = float(os.getenv("VALID_PRICE_MAX", "0.95"))

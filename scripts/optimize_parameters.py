@@ -105,15 +105,18 @@ async def run_optimization():
     # 1. DEFINE SEARCH GRID
     # ========================================================================
     param_grid = {
-        'TRADE_UNIT': [100, 500],              # Position Size
-        'SPIKE_THRESHOLD': [0.04, 0.05],       # Sensitivity
-        'TARGET_PROFIT_USD': [20.0, 40.0],     # Take Profit
-        'TARGET_LOSS_USD': [-5.0, -15.0],      # Stop Loss
-        'MOMENTUM_WINDOW': [3, 6],             # Trend Lookback
-        'MOMENTUM_THRESHOLD': [0.03, 0.05],    # Trend Strength
-        'MIN_EDGE': [0.05, 0.08],              # Mispricing Edge
-        'TRAILING_STOP_ACTIVATION_USD': [10.0, 20.0], # Trailing Stop Start
-        'TRAILING_STOP_DISTANCE_USD': [5.0, 10.0]     # Trailing Stop Distance
+        'TRADE_UNIT': [100, 500],
+        'SPIKE_THRESHOLD': [0.04, 0.05],
+        'TARGET_PROFIT_USD': [30.0, 50.0],
+        'TARGET_LOSS_USD': [-5.0, -10.0],
+        'MOMENTUM_WINDOW': [3, 6],
+        'MOMENTUM_THRESHOLD': [0.03, 0.05],
+        'MOMENTUM_REVERSAL_MULTIPLIER': [0.5, 0.8],
+        'MIN_EDGE': [0.05, 0.08],
+        'VOLUME_SPIKE_THRESHOLD': [3.0, 5.0],
+        'TRAILING_STOP_ACTIVATION_USD': [15.0, 25.0],
+        'TRAILING_STOP_DISTANCE_USD': [5.0, 10.0],
+        'MAX_EVENT_EXPOSURE_USD': [200.0, 600.0]
     }
     
     keys = list(param_grid.keys())
@@ -121,7 +124,7 @@ async def run_optimization():
     
     print(f"Testing {len(combinations)} parameter combinations...")
     print("-" * 90)
-    print(f"{'ID':<4} | {'Unit':<5} {'Spike':<6} {'TP':<5} {'SL':<5} {'MomW':<4} {'MomT':<6} {'Edge':<6} {'TrAct':<6} {'TrDst':<6} | {'Return':<10} {'Win%':<6} {'Trades':<6}")
+    print(f"{'ID':<4} | {'Unit':<4} {'Spk':<4} {'TP':<4} {'SL':<4} {'MW':<2} {'MT':<4} {'RM':<3} {'Edg':<4} {'Vol':<3} {'TA':<4} {'TD':<4} {'Exp':<4} | {'Return':<9} {'Win%':<5} {'Trds':<5}")
     print("-" * 90)
     
     results = []
@@ -138,11 +141,19 @@ async def run_optimization():
         live_config.TARGET_LOSS_USD = params['TARGET_LOSS_USD']
         live_config.SPIKE_THRESHOLD = params['SPIKE_THRESHOLD']
         live_config.MIN_EDGE = params['MIN_EDGE']
+        live_config.MIN_CONFIDENCE_MISPRICING = 0.60
         
         # Momentum Settings
         live_config.ENABLE_MOMENTUM_STRATEGY = True
         live_config.MOMENTUM_WINDOW = params['MOMENTUM_WINDOW']
         live_config.MOMENTUM_THRESHOLD = params['MOMENTUM_THRESHOLD']
+        live_config.MIN_CONFIDENCE_MOMENTUM = 0.65
+        live_config.MOMENTUM_REVERSAL_MULTIPLIER = params['MOMENTUM_REVERSAL_MULTIPLIER']
+        
+        # Volume Settings
+        live_config.ENABLE_VOLUME_STRATEGY = True
+        live_config.VOLUME_SPIKE_THRESHOLD = params['VOLUME_SPIKE_THRESHOLD']
+        live_config.MIN_VOLUME_FOR_STRATEGY = 100
         
         # Mispricing Settings
         live_config.ENABLE_MISPRICING_STRATEGY = True
@@ -167,10 +178,11 @@ async def run_optimization():
             TRAILING_STOP_ACTIVATION_USD=params['TRAILING_STOP_ACTIVATION_USD'],
             TRAILING_STOP_DISTANCE_USD=params['TRAILING_STOP_DISTANCE_USD'],
             
-            MAX_SLIPPAGE_TOLERANCE=0.025,
-            MIN_LIQUIDITY_USD=500.0,
-            MAX_SPREAD_PCT=0.30,
-            MAX_DAILY_LOSS_PCT=0.15
+            MAX_SLIPPAGE_TOLERANCE=0.025,  # From input
+            MIN_LIQUIDITY_USD=500.0,       # From input
+            MAX_SPREAD_PCT=0.30,           # From input
+            MAX_DAILY_LOSS_PCT=0.15,       # From input
+            MAX_EVENT_EXPOSURE_USD=params['MAX_EVENT_EXPOSURE_USD']
         )
         
         engine = BacktestEngine(
@@ -198,7 +210,7 @@ async def run_optimization():
         results.append(result_entry)
         
         # Print Progress row
-        print(f"{i+1:<4} | {params['TRADE_UNIT']:<5} {params['SPIKE_THRESHOLD']:<6.2f} {params['TARGET_PROFIT_USD']:<5.1f} {params['TARGET_LOSS_USD']:<5.1f} {params['MOMENTUM_WINDOW']:<4} {params['MOMENTUM_THRESHOLD']:<6.2f} {params['MIN_EDGE']:<6.2f} {params['TRAILING_STOP_ACTIVATION_USD']:<6.1f} {params['TRAILING_STOP_DISTANCE_USD']:<6.1f} | ${res.total_return_usd:<9.2f} {res.win_rate:<6.1f} {res.total_trades:<6}")
+        print(f"{i+1:<4} | {params['TRADE_UNIT']:<4} {params['SPIKE_THRESHOLD']:<4.2f} {params['TARGET_PROFIT_USD']:<4.0f} {params['TARGET_LOSS_USD']:<4.0f} {params['MOMENTUM_WINDOW']:<2} {params['MOMENTUM_THRESHOLD']:<4.2f} {params['MOMENTUM_REVERSAL_MULTIPLIER']:<3.1f} {params['MIN_EDGE']:<4.2f} {params['VOLUME_SPIKE_THRESHOLD']:<3.1f} {params['TRAILING_STOP_ACTIVATION_USD']:<4.0f} {params['TRAILING_STOP_DISTANCE_USD']:<4.0f} {params['MAX_EVENT_EXPOSURE_USD']:<4.0f} | ${res.total_return_usd:<8.2f} {res.win_rate:<5.1f} {res.total_trades:<5}")
 
     # ========================================================================
     # 3. ANALYZE RESULTS
@@ -218,8 +230,10 @@ async def run_optimization():
         print(f"  • Spike Threshold: {p['SPIKE_THRESHOLD']:.2f}")
         print(f"  • Targets: +${p['TARGET_PROFIT_USD']} / ${p['TARGET_LOSS_USD']}")
         print(f"  • Momentum: Window={p['MOMENTUM_WINDOW']}, Thresh={p['MOMENTUM_THRESHOLD']:.2f}")
+        print(f"  • Volume: Thresh={p['VOLUME_SPIKE_THRESHOLD']:.1f}")
         print(f"  • Mispricing: Edge={p['MIN_EDGE']:.2f}")
         print(f"  • Trailing Stop: Activate=${p['TRAILING_STOP_ACTIVATION_USD']}, Dist=${p['TRAILING_STOP_DISTANCE_USD']}")
+        print(f"  • Risk: Max Exposure=${p['MAX_EVENT_EXPOSURE_USD']}")
         print(f"  • Stats: {m['trades']} trades, {m['win_rate']:.1f}% win rate, {m['drawdown']:.2f}% drawdown")
 
     # Save best config suggestion
@@ -232,9 +246,12 @@ async def run_optimization():
     print(f"TARGET_LOSS_USD={best['TARGET_LOSS_USD']}")
     print(f"MOMENTUM_WINDOW={best['MOMENTUM_WINDOW']}")
     print(f"MOMENTUM_THRESHOLD={best['MOMENTUM_THRESHOLD']}")
+    print(f"MOMENTUM_REVERSAL_MULTIPLIER={best['MOMENTUM_REVERSAL_MULTIPLIER']}")
+    print(f"VOLUME_SPIKE_THRESHOLD={best['VOLUME_SPIKE_THRESHOLD']}")
     print(f"MIN_EDGE={best['MIN_EDGE']}")
     print(f"TRAILING_STOP_ACTIVATION_USD={best['TRAILING_STOP_ACTIVATION_USD']}")
     print(f"TRAILING_STOP_DISTANCE_USD={best['TRAILING_STOP_DISTANCE_USD']}")
+    print(f"MAX_EVENT_EXPOSURE_USD={best['MAX_EVENT_EXPOSURE_USD']}")
     print("-" * 40)
 
 if __name__ == "__main__":

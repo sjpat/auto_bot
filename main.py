@@ -18,6 +18,7 @@ from src.trading.position_manager import PositionManager
 from src.trading.risk_manager import RiskManager
 from src.trading.fee_calculator import FeeCalculator
 from src.trading.market_filter import MarketFilter
+from src.trading.correlation_manager import CorrelationManager
 from src.notification_manager import NotificationManager
 
 
@@ -86,6 +87,12 @@ class TradingBot:
             client=self.client,
             config=self.config,
             fee_calculator=self.fee_calculator
+        )
+        
+        # Initialize Correlation Manager
+        self.correlation_manager = CorrelationManager(
+            config=self.config,
+            position_manager=self.position_manager
         )
         
         # Initialize Notifications
@@ -269,6 +276,17 @@ class TradingBot:
                     f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
                 )
                 return False
+        
+        # 3. Correlation check
+        # Estimate cost: price * trade_unit
+        estimated_cost = market.price * self.config.TRADE_UNIT
+        corr_passed, corr_reason = self.correlation_manager.check_exposure(
+            market.market_id, 
+            estimated_cost
+        )
+        if not corr_passed:
+            self.logger.debug(f"❌ {corr_reason}")
+            return False
         
         self.logger.info(
             f"✅ Trade validation passed for {signal.market_id}: "
