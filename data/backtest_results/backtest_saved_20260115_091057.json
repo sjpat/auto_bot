@@ -1,29 +1,3 @@
-{
-  "summary": {
-    "start_date": "2026-01-14T13:07:38.371655",
-    "end_date": "2026-01-14T15:31:20.998634",
-    "starting_balance": 10000,
-    "final_balance": 10000,
-    "total_pnl": 0.0,
-    "win_rate": 0.0,
-    "total_trades": 0,
-    "profit_factor": 0.0,
-    "max_drawdown_pct": 0.0,
-    "sharpe_ratio": 0.0
-  },
-  "trades": [],
-  "equity_curve": [
-    {
-      "timestamp": "2026-01-14T13:07:38.371655",
-      "balance": 10000
-    },
-    {
-      "timestamp": "2026-01-14T13:07:38.371655",
-      "balance": 10000
-    },
-    {
-      "timestamp": "2026-01-14T14:29:47.024635",
-      "balance": 10000
-    }
-  ]
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:4cdd16c4f4027dedade5cde863876f4dacc40bc1c93ddd071207acf1b7f97938
+size 615
