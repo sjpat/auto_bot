@@ -43,7 +43,8 @@ class TestTradingBot:
              patch('main.RiskManager'), \
              patch('main.FeeCalculator'), \
              patch('main.MarketFilter'), \
-             patch('main.NotificationManager'):
+             patch('main.NotificationManager'), \
+             patch('main.CorrelationManager'):
             
             bot = TradingBot(platform="kalshi")
             
@@ -52,6 +53,8 @@ class TestTradingBot:
             bot.client.get_balance = AsyncMock(return_value=1000.0)
             bot.client.verify_connection = AsyncMock()
             bot.client.get_markets = AsyncMock(return_value=[])
+            bot.client.get_market = AsyncMock(return_value=None)
+            bot.client.get_order = AsyncMock(return_value=None)
             
             # Mock risk manager
             bot.risk_manager.initialize_daily = AsyncMock()
@@ -65,6 +68,11 @@ class TestTradingBot:
             bot.notification_manager.send_trade_alert = AsyncMock()
             bot.notification_manager.send_exit_alert = AsyncMock()
             bot.notification_manager.send_error = AsyncMock()
+            
+            # Mock correlation manager
+            bot.correlation_manager.check_exposure.return_value = (True, "OK")
+            bot.position_manager.get_active_positions.return_value = []
+            bot.position_manager.get_positions_for_market.return_value = []
             
             return bot
 
@@ -99,12 +107,14 @@ class TestTradingBot:
         """Test trade validation logic - Success case."""
         async def _test():
             # Setup Market
-            market = Mock()
+            market = MagicMock()
             market.liquidity_usd = 1000.0
             market.best_ask_cents = 51
             market.best_bid_cents = 49
             market.last_price_cents = 50
             market.price = 0.50
+            market.bids = []
+            market.asks = []
             
             # Setup Signal
             signal = Mock(spec=Signal)
@@ -125,7 +135,7 @@ class TestTradingBot:
     def test_should_trade_signal_risk_fail(self, bot):
         """Test trade validation logic - Risk check failure."""
         async def _test():
-            market = Mock()
+            market = MagicMock()
             market.liquidity_usd = 1000.0
             
             signal = Mock(spec=Signal)
@@ -145,7 +155,7 @@ class TestTradingBot:
     def test_should_trade_signal_low_liquidity(self, bot):
         """Test trade validation logic - Low liquidity."""
         async def _test():
-            market = Mock()
+            market = MagicMock()
             market.liquidity_usd = 100.0  # Below 500.0 min
             
             signal = Mock(spec=Signal)
@@ -168,7 +178,7 @@ class TestTradingBot:
             signal.signal_type = SignalType.BUY
             signal.price = 0.50
             
-            market = Mock()
+            market = MagicMock()
             
             # Mock successful order submission
             bot.order_executor.submit_order.return_value = {
@@ -194,12 +204,14 @@ class TestTradingBot:
         """Test that volume strategy signals are processed correctly."""
         async def _test():
             # Setup Market
-            market = Mock()
+            market = MagicMock()
             market.liquidity_usd = 1000.0
             market.best_ask_cents = 51
             market.best_bid_cents = 49
             market.last_price_cents = 50
             market.price = 0.50
+            market.bids = []
+            market.asks = []
             
             # Setup Signal from Volume Strategy
             signal = Mock(spec=Signal)

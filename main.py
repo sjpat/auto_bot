@@ -149,7 +149,7 @@ class TradingBot:
                 # 1. Fetch all open markets
                 all_markets = await self.client.get_markets(
                     status="open",
-                    limit=200,
+                    limit=1000,
                     filter_untradeable=False
                 )
 

@@ -8,18 +8,42 @@ https://github.com/Kalshi/kalshi-starter-code-python/blob/main/clients.py
 import asyncio
 import logging
 import time
-import base64
+import uuid
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
 
-import aiohttp
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from cryptography.hazmat.backends import default_backend
-from cryptography.exceptions import InvalidSignature
 from src.utils.decorators import async_retry
+
+try:
+    from kalshi_python_async import Configuration, KalshiClient as AsyncKalshiClient
+    from kalshi_python_async.models import CreateOrderRequest
+    from kalshi_python_async.models.market import Market as SDKMarket
+    from pydantic import ValidationError
+
+    # Patch the SDK Market model to handle missing fields from the API
+    # Some markets (like multivariate) return null for these fields, causing Pydantic to fail
+    if hasattr(SDKMarket, 'model_fields'):
+        # Pydantic v2: Update annotations and field info to allow None
+        if 'category' in SDKMarket.model_fields:
+            SDKMarket.__annotations__['category'] = Optional[str]
+            SDKMarket.model_fields['category'].annotation = Optional[str]
+            SDKMarket.model_fields['category'].default = None
+            
+        if 'risk_limit_cents' in SDKMarket.model_fields:
+            SDKMarket.__annotations__['risk_limit_cents'] = Optional[int]
+            SDKMarket.model_fields['risk_limit_cents'].annotation = Optional[int]
+            SDKMarket.model_fields['risk_limit_cents'].default = None
+            
+        SDKMarket.model_rebuild(force=True)
+
+except ImportError:
+    AsyncKalshiClient = None
+    Configuration = None
+    CreateOrderRequest = None
+    SDKMarket = None
+    ValidationError = Exception
 
 
 logger = logging.getLogger(__name__)
@@ -143,179 +167,38 @@ class KalshiClient:
     
     def __init__(self, config):
         """
-        Initialize Kalshi client.
+        Initialize Kalshi client using official SDK.
         
         Args:
             config: Configuration object with KALSHI_API_KEY, KALSHI_PRIVATE_KEY_PATH, KALSHI_DEMO
         """
+        if AsyncKalshiClient is None:
+            raise ImportError("kalshi-python-async not installed. Please run: pip install kalshi-python-async")
+            
         self.logger = logging.getLogger(__name__)
         self.config = config
         
-        # API credentials
-        self.key_id = config.KALSHI_API_KEY
-        self.private_key_path = config.KALSHI_PRIVATE_KEY_PATH
-        self.demo = config.KALSHI_DEMO
-        
-        # ✅ FIXED: Correct URLs from official code
-        if self.demo:
-            self.HTTP_BASE_URL = "https://demo-api.kalshi.co"  # Note: .co not .com
+        # Setup SDK Configuration
+        self.sdk_config = Configuration()
+        if config.KALSHI_DEMO:
+            self.sdk_config.host = "https://demo-api.kalshi.co/trade-api/v2"
         else:
-            self.HTTP_BASE_URL = "https://api.elections.kalshi.com"
-        
-        # API endpoints
-        self.exchange_url = "/trade-api/v2/exchange"
-        self.markets_url = "/trade-api/v2/markets"
-        self.portfolio_url = "/trade-api/v2/portfolio"
+            self.sdk_config.host = "https://api.elections.kalshi.com/trade-api/v2"
+            
+        self.sdk_config.api_key_id = config.KALSHI_API_KEY
         
         # Load private key
-        self.private_key = self._load_private_key()
+        with open(config.KALSHI_PRIVATE_KEY_PATH, 'r') as f:
+            self.sdk_config.private_key_pem = f.read()
+            
+        # Initialize SDK Client
+        self.client = AsyncKalshiClient(self.sdk_config)
         
-        # Rate limiting
-        self.last_api_call = datetime.now()
-        self.rate_limit_ms = 100  # 100ms between calls
+        # Expose sub-clients for easier access and testing
+        self.markets = self.client
+        self.portfolio = self.client
         
-        # Session
-        self.session: Optional[aiohttp.ClientSession] = None
-        
-        self.logger.info(f"KalshiClient initialized ({'DEMO' if self.demo else 'PROD'} mode)")
-        self.logger.info(f"Base URL: {self.HTTP_BASE_URL}")
-    
-    def _load_private_key(self) -> rsa.RSAPrivateKey:
-        """Load RSA private key from PEM file."""
-        with open(self.private_key_path, 'rb') as f:
-            private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
-        return private_key
-    
-    def _sign_pss_text(self, text: str) -> str:
-        """
-        Sign text using RSA-PSS and return base64 encoded signature.
-        
-        This is the official Kalshi authentication method.
-        """
-        message = text.encode('utf-8')
-        try:
-            signature = self.private_key.sign(
-                message,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.DIGEST_LENGTH
-                ),
-                hashes.SHA256()
-            )
-            return base64.b64encode(signature).decode('utf-8')
-        except InvalidSignature as e:
-            raise ValueError("RSA sign PSS failed") from e
-    
-    def _request_headers(self, method: str, path: str) -> Dict[str, str]:
-        """
-        Generate authentication headers for API requests.
-        
-        Official Kalshi authentication format:
-        - KALSHI-ACCESS-KEY: API key ID
-        - KALSHI-ACCESS-SIGNATURE: PSS signature of timestamp+method+path
-        - KALSHI-ACCESS-TIMESTAMP: Current timestamp in milliseconds
-        """
-        # Current time in milliseconds
-        current_time_ms = int(time.time() * 1000)
-        timestamp_str = str(current_time_ms)
-        
-        # Remove query params from path for signature
-        path_parts = path.split('?')
-        clean_path = path_parts[0]
-        
-        # Message to sign: timestamp + method + path
-        msg_string = timestamp_str + method + clean_path
-        
-        # Sign with PSS
-        signature = self._sign_pss_text(msg_string)
-        
-        # ✅ FIXED: Official Kalshi header format
-        headers = {
-            "Content-Type": "application/json",
-            "KALSHI-ACCESS-KEY": self.key_id,
-            "KALSHI-ACCESS-SIGNATURE": signature,
-            "KALSHI-ACCESS-TIMESTAMP": timestamp_str,
-        }
-        
-        return headers
-    
-    async def _rate_limit(self):
-        """Built-in rate limiter to prevent exceeding API rate limits."""
-        now = datetime.now()
-        threshold = timedelta(milliseconds=self.rate_limit_ms)
-        
-        if now - self.last_api_call < threshold:
-            sleep_time = (threshold - (now - self.last_api_call)).total_seconds()
-            await asyncio.sleep(sleep_time)
-        
-        self.last_api_call = datetime.now()
-    
-    @async_retry(max_attempts=3, delay_seconds=60, backoff_multiplier=2)
-    async def _request(
-        self,
-        method: str,
-        path: str,
-        params: Optional[Dict] = None,
-        json: Optional[Dict] = None
-    ) -> Dict[str, Any]:
-        """
-        Make HTTP request with authentication.
-        
-        Args:
-            method: HTTP method (GET, POST, DELETE)
-            path: API path (e.g., '/trade-api/v2/markets')
-            params: Query parameters
-            json: JSON body
-        
-        Returns:
-            Response JSON
-        """
-        await self._rate_limit()
-        
-        if not self.session:
-            self.session = aiohttp.ClientSession()
-        
-        url = self.HTTP_BASE_URL + path
-        headers = self._request_headers(method, path)
-        
-        try:
-            async with self.session.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                json=json,
-                timeout=aiohttp.ClientTimeout(total=10)
-            ) as response:
-                # Handle errors
-                if response.status == 429:
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited. Retrying after {retry_after}s")
-                    await asyncio.sleep(retry_after)
-                    return await self._request(method, path, params, json)
-                
-                if response.status == 401:
-                    self.logger.critical("Authentication failed (401)")
-                    raise Exception("Authentication failed - Invalid API key")
-                
-                if response.status == 403:
-                    self.logger.critical("Account forbidden (403)")
-                    raise Exception("Account forbidden - Possible suspension")
-                
-                if response.status not in range(200, 299):
-                    error_text = await response.text()
-                    self.logger.error(f"API error {response.status}: {error_text}")
-                    raise Exception(f"API error {response.status}: {error_text}")
-                
-                return await response.json()
-        
-        except aiohttp.ClientError as e:
-            self.logger.error(f"Request failed: {e}")
-            raise
+        self.logger.info(f"KalshiClient initialized with SDK ({'DEMO' if config.KALSHI_DEMO else 'PROD'})")
     
     async def authenticate(self) -> bool:
         """
@@ -339,38 +222,88 @@ class KalshiClient:
         Returns:
             Balance in USD
         """
-        response = await self._request("GET", self.portfolio_url + "/balance")
-        balance_cents = response.get("balance", 0)
+        response = await self.portfolio.get_balance()
+        balance_cents = response.balance
         balance_usd = balance_cents / 100.0
         self.logger.debug(f"Account balance: ${balance_usd:.2f}")
         return balance_usd
 
-    async def get(self, path: str, params: Optional[Dict] = None) -> Dict:
-        """
-        Generic GET request using existing _request method
-        
-        Args:
-            path: API endpoint path (e.g., '/markets/TICKER/history')
-            params: Optional query parameters
+    def _parse_market(self, m: Any) -> Optional[Market]:
+        """Parse SDK market model to Market dataclass."""
+        try:
+            # close_time handling
+            if m.close_time:
+                if isinstance(m.close_time, datetime):
+                    close_ts = int(m.close_time.timestamp())
+                else:
+                    # Fallback if it's a string
+                    close_dt = datetime.fromisoformat(str(m.close_time).replace('Z', '+00:00'))
+                    close_ts = int(close_dt.timestamp())
+            else:
+                return None
             
-        Returns:
-            JSON response as dict
-        """
-        return await self._request("GET", path, params=params)
-    
-    async def post(self, path: str, data: Optional[Dict] = None) -> Dict:
-        """
-        Generic POST request using existing _request method
-        
-        Args:
-            path: API endpoint path
-            data: Optional request body
+            # Price handling
+            last_price = m.last_price or 0
+            yes_bid = m.yes_bid or 0
+            yes_ask = m.yes_ask or 0
+            volume = m.volume or 0
             
-        Returns:
-            JSON response as dict
-        """
-        return await self._request("POST", path, json=data)
-    
+            yes_bid_cents = yes_bid * 100
+            yes_ask_cents = yes_ask * 100
+            
+            # Better price estimation for markets that haven't traded yet
+            if last_price > 0:
+                last_price_cents = last_price * 100
+            elif yes_bid_cents > 0 and yes_ask_cents > 0:
+                # Use mid-price if no last trade but active book
+                last_price_cents = (yes_bid_cents + yes_ask_cents) // 2
+            else:
+                last_price_cents = 5000  # Default to 50 cents
+            
+            # Validate price ranges
+            if not (0 <= last_price_cents <= 10000):
+                return None
+                
+            return Market(
+                market_id=m.ticker,
+                title=m.title,
+                status=m.status,
+                close_ts=close_ts,
+                liquidity_cents=volume,
+                last_price_cents=last_price_cents,
+                best_bid_cents=yes_bid_cents,
+                best_ask_cents=yes_ask_cents
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to parse market {getattr(m, 'ticker', 'Unknown')}: {e}")
+            return None
+
+    def _parse_order(self, order_data: Any) -> Order:
+        """Parse SDK order model to Order dataclass."""
+        # Determine price in cents
+        price_cents = 0
+        if order_data.yes_price:
+            price_cents = order_data.yes_price
+        elif order_data.no_price:
+            price_cents = order_data.no_price
+            
+        # Try to get fill price
+        avg_fill_price_cents = 0
+        if hasattr(order_data, 'avg_fill_price') and order_data.avg_fill_price:
+             avg_fill_price_cents = order_data.avg_fill_price
+
+        return Order(
+            order_id=order_data.order_id,
+            market_id=order_data.ticker,
+            side=order_data.action,
+            quantity=order_data.count,
+            price_cents=price_cents,
+            status=order_data.status,
+            filled_quantity=order_data.filled_count or 0,
+            avg_fill_price_cents=avg_fill_price_cents,
+            created_at=getattr(order_data, 'created_time', None)
+        )
+
     async def get_market_history(
         self,
         market_id: str,
@@ -387,18 +320,15 @@ class KalshiClient:
             List of historical stat snapshots
         """
         try:
-            params = {}
-            if last_seen_ts:
-                params['last_seen_ts'] = last_seen_ts
-            
-            # Kalshi API endpoint for market history
-            response = await self.get(
-                f"/markets/{market_id}/history",
-                params=params
+            response = await self.markets.get_market_history(
+                market_id,
+                last_seen_ts=last_seen_ts
             )
             
-            # The response should have a 'history' field
-            return response.get('history', [])
+            # Convert SDK models to dicts
+            if response.history:
+                return [h.to_dict() for h in response.history]
+            return []
             
         except Exception as e:
             self.logger.error(f"Failed to get market history for {market_id}: {e}")
@@ -424,28 +354,44 @@ class KalshiClient:
             Dict with candlesticks list
         """
         try:
-            params = {
-                'start_ts': start_ts,
-                'end_ts': end_ts,
-                'period_interval': period_interval
-            }
-            
-            response = await self.get(
-                f"/markets/{market_id}/candlesticks",
-                params=params
+            response = await self.markets.get_market_candlesticks(
+                market_id,
+                start_ts=start_ts,
+                end_ts=end_ts,
+                period_interval=period_interval
             )
             
-            return response
+            return response.to_dict()
             
         except Exception as e:
             self.logger.error(f"Failed to get candlesticks for {market_id}: {e}")
             return {'candlesticks': []}
 
+    async def get_market(self, market_id: str) -> Optional[Market]:
+        """
+        Get a single market by ID.
+        
+        Args:
+            market_id: Market ticker
+            
+        Returns:
+            Market object or None
+        """
+        try:
+            response = await self.markets.get_market(ticker=market_id)
+            return self._parse_market(response.market)
+        except ValidationError as e:
+            self.logger.error(f"SDK Validation error for market {market_id}: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get market {market_id}: {e}")
+            return None
 
     async def get_markets(
         self,
         status: str = "open",
         limit: int = 1000,
+        event_ticker: Optional[str] = None,
         min_volume: int = 0,
         filter_untradeable: bool = True
     ) -> List[Market]:
@@ -454,7 +400,8 @@ class KalshiClient:
         
         Args:
             status: Filter by status ('open', 'closed', 'halted')
-            limit: Maximum number of markets to return
+            limit: Maximum number of parsed markets to return
+            event_ticker: Optional filter for a specific event (e.g., 'NBA')
             min_volume: Minimum volume in cents (default 100 = $1)
             filter_untradeable: Skip markets with no trading activity (default True)
         
@@ -462,100 +409,50 @@ class KalshiClient:
             List of Market objects
         """
         start_time = time.time()
-        self.logger.info(
-            f"Fetching markets: status={status}, limit={limit}, "
-            f"min_volume={min_volume}, filter_untradeable={filter_untradeable}"
-        )
+        log_msg = f"Fetching markets: status={status}, limit={limit}"
+        if event_ticker:
+            log_msg += f", event={event_ticker}"
+        self.logger.info(log_msg)
         
-        # Fetch more markets since we'll filter many out
-        fetch_limit = min(limit * 5, 1000) if filter_untradeable else limit
-        params = {"status": status, "limit": fetch_limit}
-        response = await self._request("GET", self.markets_url, params=params)
+        # Fetch markets using SDK
+        # Always fetch a large batch to ensure we don't miss sports markets further down the list
+        fetch_limit = max(limit, 1000)
+        try:
+            response = await self.markets.get_markets(
+                limit=fetch_limit, 
+                status=status,
+                event_ticker=event_ticker
+            )
+            markets = response.markets or []
+        except ValidationError as e:
+            self.logger.error(f"SDK failed to parse market list due to validation errors: {e}")
+            return []
         
-        markets = response.get("markets", [])
         market_objects = []
         parse_errors = []
         
         for m in markets:
             try:
-                # ✅ FIXED: Robust timestamp parsing with better error handling
-                close_time_str = m.get("close_time") or m.get("close_ts") or m.get("expiration_time")
-                
-                if close_time_str is None:
-                    self.logger.warning(f"Market {m.get('ticker', 'Unknown')} missing close_time field, skipping")
-                    parse_errors.append(f"{m.get('ticker')}: missing close_time")
-                    continue
-                
-                # Parse the timestamp
-                try:
-                    if isinstance(close_time_str, (int, float)):
-                        # Already a timestamp
-                        close_ts = int(close_time_str)
-                    elif isinstance(close_time_str, str):
-                        # Parse ISO format string
-                        # Handle both 'Z' and '+00:00' timezone formats
-                        clean_time_str = close_time_str.replace('Z', '+00:00')
-                        close_dt = datetime.fromisoformat(clean_time_str)
-                        close_ts = int(close_dt.timestamp())
-                    else:
-                        raise ValueError(f"Unexpected close_time type: {type(close_time_str)}")
-                except (ValueError, AttributeError) as e:
-                    self.logger.warning(
-                        f"Failed to parse close_time for {m.get('ticker')}: "
-                        f"'{close_time_str}' - {e}"
-                    )
-                    parse_errors.append(f"{m.get('ticker')}: invalid timestamp format")
-                    continue
-                
-                # Get prices - Kalshi returns cents (0-100), convert to basis points (0-10000)
-                last_price = m.get("last_price", 0)
-                yes_bid = m.get("yes_bid", 0)
-                yes_ask = m.get("yes_ask", 0)
-                volume = m.get("volume", 0)
-                
-                # Convert from cents (0-100) to basis points (0-10000) by multiplying by 100
-                last_price_cents = last_price * 100 if last_price > 0 else 5000  # Default to 50 cents
-                yes_bid_cents = yes_bid * 100
-                yes_ask_cents = yes_ask * 100
-                
-                # ✅ ADDED: Validate price ranges to catch bad data
-                if not (0 <= last_price_cents <= 10000):
-                    self.logger.warning(
-                        f"Market {m.get('ticker')} has invalid price: {last_price_cents}, skipping"
-                    )
-                    parse_errors.append(f"{m.get('ticker')}: price out of range")
+                market = self._parse_market(m)
+                if not market:
                     continue
                 
                 # Filter untradeable markets if requested
                 if filter_untradeable:
-                    # Skip markets with no trading activity
-                    if last_price == 0 and yes_bid == 0 and yes_ask == 0:
-                        continue
-                    
                     # Skip markets with insufficient volume
-                    if volume < min_volume:
+                    if market.liquidity_cents < min_volume:
                         continue
                 
-                market = Market(
-                    market_id=m["ticker"],
-                    title=m["title"],
-                    status=m["status"],
-                    close_ts=close_ts,
-                    liquidity_cents=volume,
-                    last_price_cents=last_price_cents,
-                    best_bid_cents=yes_bid_cents,
-                    best_ask_cents=yes_ask_cents
-                )
                 market_objects.append(market)
                 
                 # Stop if we have enough markets
                 if len(market_objects) >= limit:
                     break
             
-            except (KeyError, ValueError, TypeError) as e:
-                error_msg = f"Failed to parse market {m.get('ticker', 'Unknown')}: {e}"
+            except Exception as e:
+                error_msg = f"Failed to parse market {getattr(m, 'ticker', 'Unknown')}: {e}"
                 self.logger.warning(error_msg)
-                parse_errors.append(f"{m.get('ticker', 'Unknown')}: {str(e)}")
+                parse_errors.append(f"{getattr(m, 'ticker', 'Unknown')}: {str(e)}")
                 continue
         
         # Log the results
@@ -576,11 +473,28 @@ class KalshiClient:
         if filter_untradeable:
             self.logger.debug(
                 f"Filtering stats: "
-                f"{len([m for m in markets if m.get('last_price', 0) == 0])} with no price, "
-                f"{len([m for m in markets if m.get('volume', 0) < min_volume])} below min_volume"
+                f"{len([m for m in markets if (m.last_price or 0) == 0])} with no price, "
+                f"{len([m for m in markets if (m.volume or 0) < min_volume])} below min_volume"
             )
         
         return market_objects
+
+    async def get_order(self, order_id: str) -> Optional[Order]:
+        """
+        Get a single order by ID.
+        
+        Args:
+            order_id: Order ID
+            
+        Returns:
+            Order object or None
+        """
+        try:
+            response = await self.portfolio.get_order(order_id)
+            return self._parse_order(response.order)
+        except Exception as e:
+            self.logger.error(f"Failed to get order {order_id}: {e}")
+            return None
     
     async def create_order(
         self,
@@ -603,29 +517,22 @@ class KalshiClient:
         Returns:
             Order object
         """
-        price_cents = int(price * 100)  # ✅ FIXED: *100 not *10000
+        price_cents = int(price * 100)
         
-        payload = {
-            "ticker": market_id,
-            "action": side.lower(),
-            "count": quantity,
-            "yes_price": price_cents if side.lower() == "buy" else None,
-            "no_price": price_cents if side.lower() == "sell" else None,
-            "type": order_type
-        }
-        
-        response = await self._request("POST", self.portfolio_url + "/orders", json=payload)
-        
-        order = Order(
-            order_id=response["order_id"],
-            market_id=response["ticker"],
-            side=response["action"],
-            quantity=response["count"],
-            price_cents=price_cents,
-            status=response["status"],
-            filled_quantity=response.get("filled_count", 0),
-            avg_fill_price_cents=response.get("avg_fill_price_cents", 0)
+        # Create order request using SDK model
+        req = CreateOrderRequest(
+            ticker=market_id,
+            action=side.lower(),
+            side='yes',  # Default to 'yes' side for this bot's logic
+            client_order_id=str(uuid.uuid4()),
+            count=quantity,
+            type=order_type,
+            yes_price=price_cents
         )
+        
+        response = await self.portfolio.create_order(req)
+        order_data = response.order
+        order = self._parse_order(order_data)
         
         self.logger.info(f"Order created: {order.order_id} | {side.upper()} {quantity} @ ${price:.4f}")
         return order
@@ -636,9 +543,14 @@ class KalshiClient:
     
     async def close(self):
         """Close client session."""
-        if self.session:
-            await self.session.close()
-            self.logger.info("Session closed")
+        if self.client:
+            # SDK client might have close method or rely on aiohttp session
+            # AsyncKalshiClient usually has api_client which has close
+            if hasattr(self.client, 'api_client') and hasattr(self.client.api_client, 'close'):
+                await self.client.api_client.close()
+            elif hasattr(self.client, 'close'):
+                await self.client.close()
+            self.logger.info("SDK Session closed")
     
     async def __aenter__(self):
         """Async context manager entry."""
