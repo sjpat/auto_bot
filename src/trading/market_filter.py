@@ -24,6 +24,7 @@ class MarketFilter:
         tradeable = []
         filter_stats = {
             'total': len(markets),
+            'keyword': 0,
             'no_price': 0,
             'expired': 0,
             'too_far': 0,
@@ -33,6 +34,13 @@ class MarketFilter:
         }
         
         for market in markets:
+            # Filter 0: Keyword filter
+            if self.config.TARGET_EVENT_KEYWORDS:
+                search_text = (market.title + " " + (market.category or "")).lower()
+                if not any(keyword.lower() in search_text for keyword in self.config.TARGET_EVENT_KEYWORDS):
+                    filter_stats['keyword'] += 1
+                    continue
+
             # Filter 1: Must have a price
             if market.last_price_cents == 0:
                 filter_stats['no_price'] += 1
@@ -55,10 +63,12 @@ class MarketFilter:
             
             # Filter 4: Reasonable bid-ask spread (< 50%)
             if market.best_ask_cents > 0 and market.best_bid_cents > 0:
-                spread_pct = (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
-                if spread_pct > 0.50:  # 50% spread
-                    filter_stats['wide_spread'] += 1
-                    continue
+                mid_price_cents = (market.best_ask_cents + market.best_bid_cents) / 2
+                if mid_price_cents > 0:
+                    spread_pct = (market.best_ask_cents - market.best_bid_cents) / mid_price_cents
+                    if spread_pct > 0.50:  # 50% spread
+                        filter_stats['wide_spread'] += 1
+                        continue
             
             # Passed all filters
             filter_stats['passed'] += 1
@@ -67,7 +77,8 @@ class MarketFilter:
         # Log filtering results
         self.logger.info(
             f"Market Filtering: {filter_stats['passed']}/{filter_stats['total']} passed | "
-            f"Rejected: {filter_stats['no_price']} no-price, "
+            f"Rejected: {filter_stats['keyword']} keyword, "
+            f"{filter_stats['no_price']} no-price, "
             f"{filter_stats['expired']} expired, "
             f"{filter_stats['too_far']} too-far, "
             f"{filter_stats['extreme_price']} extreme-price, "

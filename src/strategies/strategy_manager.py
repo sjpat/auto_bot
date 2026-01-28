@@ -11,6 +11,7 @@ from src.strategies.base_strategy import Signal
 from src.models.market import Market
 from src.models.position import Position
 from src.strategies.volume_strategy import VolumeStrategy
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class StrategyManager:
                     'TARGET_LOSS_USD': config.TARGET_LOSS_USD,
                     'HOLDING_TIME_LIMIT': config.HOLDING_TIME_LIMIT,
                     'COOLDOWN_PERIOD': config.COOLDOWN_PERIOD,
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
                 }
                 self.spike_strategy = SpikeStrategy(spike_config)
                 self.strategies.append(('spike', self.spike_strategy))
@@ -65,7 +66,7 @@ class StrategyManager:
                     'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MISPRICING', 0.60),
                     'MAX_HOLDING_TIME': getattr(config, 'MISPRICING_MAX_HOLDING_TIME', 14400),
                     'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50),
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT,
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD,
                     'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
                     'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5)
                 }
@@ -87,7 +88,7 @@ class StrategyManager:
                     'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
                     'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5),
                     'HOLDING_TIME_LIMIT': getattr(config, 'HOLDING_TIME_LIMIT', 1800),
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
                 }
                 self.momentum_strategy = MomentumStrategy(momentum_config)
                 self.strategies.append(('momentum', self.momentum_strategy))
@@ -198,7 +199,33 @@ class StrategyManager:
                 self.logger.error(f"❌ Error getting exits from {strategy_name}: {e}")
         
         return all_exit_signals
-    
+
+    def load_historical_data(self, history: Dict[str, List]):
+        """
+        Ingest historical price data into all strategies to 'warm them up'.
+        """
+        total_points = sum(len(pts) for pts in history.values())
+        self.logger.info(f"Warming up strategies with {total_points} points across {len(history)} markets...")
+        
+        # Use tqdm on the market grouping for clear visual progress
+        for market_id, points in tqdm(history.items(), desc="Warming up strategies", unit="market"):
+            for price, timestamp in points:
+                try:
+                    # Create a minimal mock market object for backfill
+                    mock_market = Market(
+                        market_id=market_id,
+                        title="",
+                        status="open",
+                        close_ts=int(timestamp.timestamp()),
+                        liquidity_cents=100000, 
+                        last_price_cents=int(price * 10000),
+                        best_bid_cents=int(price * 9990),
+                        best_ask_cents=int(price * 10010)
+                    )
+                    self.on_market_update(mock_market)
+                except Exception:
+                    continue
+
     def on_market_update(self, market: Market):
         """
         Forward market updates to all strategies.

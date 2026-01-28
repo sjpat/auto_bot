@@ -20,6 +20,7 @@ from src.trading.fee_calculator import FeeCalculator
 from src.trading.market_filter import MarketFilter
 from src.trading.correlation_manager import CorrelationManager
 from src.notification_manager import NotificationManager
+from src.utils.db_manager import DatabaseManager
 
 
 class TradingBot:
@@ -40,6 +41,7 @@ class TradingBot:
             level=self.config.LOG_LEVEL
         )
         self.market_filter = MarketFilter(config=self.config)
+        self.db = DatabaseManager(config=self.config)
 
         # Initialize clients based on platform
         if platform == "polymarket":
@@ -134,6 +136,14 @@ class TradingBot:
             markets = await self.client.get_markets(status="open", filter_untradeable=False)
             self.logger.info(f"Loaded {len(markets)} markets")
             
+            # Load historical data from SQLite into StrategyManager
+            self.logger.info("Loading price history from database...")
+            active_ids = [m.market_id for m in markets]
+            history = self.db.get_recent_history(market_ids=active_ids, hours=24)
+            if history and hasattr(self.strategy_manager, 'load_historical_data'):
+                self.strategy_manager.load_historical_data(history)
+                self.logger.info(f"✅ Loaded history for {len(history)} markets")
+
             await self.notification_manager.send_message(f"🤖 *Bot Started* ({self.platform})\nBalance: `${balance:.2f}`")
             self.running = True
             
@@ -175,46 +185,30 @@ class TradingBot:
                 # 2. Update price history for all markets
                 for market in all_markets:
                     self.strategy_manager.on_market_update(market)
+                
+                # Persist updates to SQLite
+                self.db.save_markets(all_markets)
                 self.logger.debug(f"Updated price history for {len(all_markets)} markets")
 
-                # 3. Apply comprehensive filtering
-                tradeable_markets = self.market_filter.filter_tradeable_markets(all_markets)
-
-                if not tradeable_markets:
-                    self.logger.debug("No tradeable markets after filtering")
-                    await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
-                    continue
-
-                # 4. Rank by opportunity
-                # In the future, the spike_detector could be made a property of the strategy_manager
-                spike_detector = getattr(self.strategy_manager, 'spike_strategy', None)
-                if spike_detector:
-                    ranked_markets = self.market_filter.rank_markets_by_opportunity(
-                        tradeable_markets,
-                        spike_detector
-                    )
-                else:
-                    ranked_markets = tradeable_markets
-
-                # 5. Generate signals from top markets
-                top_markets = ranked_markets[:20]
-                signals = self.strategy_manager.generate_entry_signals(top_markets)
+                # 3. Generate signals from all markets
+                signals = self.strategy_manager.generate_entry_signals(all_markets)
 
                 if signals:
                     self.logger.info(f"🔔 Detected {len(signals)} opportunity(ies)!")
 
                     for signal in signals:
-                        market = next((m for m in top_markets if m.market_id == signal.market_id), None)
+                        # Find the corresponding market object for the signal
+                        market = next((m for m in all_markets if m.market_id == signal.market_id), None)
                         if not market:
+                            self.logger.warning(f"Market object not found for signal on {signal.market_id}")
                             continue
 
-                        # 6. Risk check and execution
+                        # 4. Risk check and execution
                         if await self.should_trade_signal(market, signal):
                             await self.execute_signal_trade(signal, market)
                 else:
                     self.logger.debug(
-                        f"No signals generated from {len(top_markets)} top markets "
-                        f"({len(tradeable_markets)} tradeable, {len(all_markets)} total)"
+                        f"No signals generated from {len(all_markets)} total markets"
                     )
 
                 # Reset error counter on successful iteration
@@ -268,14 +262,14 @@ class TradingBot:
         
         # Check spread
         if market.best_ask_cents > 0 and market.best_bid_cents > 0:
-            spread_pct = (
-                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
-            )
-            if spread_pct > self.config.MAX_SPREAD_PCT:
-                self.logger.debug(
-                    f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
-                )
-                return False
+            mid_price_cents = (market.best_ask_cents + market.best_bid_cents) / 2
+            if mid_price_cents > 0:
+                spread_pct = (market.best_ask_cents - market.best_bid_cents) / mid_price_cents
+                if spread_pct > self.config.MAX_SPREAD_PCT:
+                    self.logger.debug(
+                        f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
+                    )
+                    return False
         
         # 3. Correlation check
         # Estimate cost: price * trade_unit
@@ -500,16 +494,6 @@ class TradingBot:
         """Graceful shutdown"""
         self.running = False
 
-        # Save price history
-        self.logger.info("Saving price history...")
-        price_histories = self.strategy_manager.get_all_price_histories()
-        if price_histories:
-            try:
-                with open("data/price_history.json", "w") as f:
-                    json.dump(price_histories, f, indent=2)
-                self.logger.info("✅ Price history saved to data/price_history.json")
-            except Exception as e:
-                self.logger.error(f"Failed to save price history: {e}")
         
         # Close all positions
         positions = self.position_manager.get_active_positions()

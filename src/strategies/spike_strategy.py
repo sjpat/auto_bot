@@ -44,7 +44,7 @@ class SpikeStrategy(BaseStrategy):
         self.target_profit_usd = config.get('TARGET_PROFIT_USD', 2.50)
         self.target_loss_usd = config.get('TARGET_LOSS_USD', -1.50)
         self.holding_time_limit = config.get('HOLDING_TIME_LIMIT', 3600)  # 1 hour
-        self.min_liquidity_requirement = config.get('MIN_LIQUIDITY_REQUIREMENT', 200.0)
+        self.min_liquidity_usd = config.get('MIN_LIQUIDITY_USD', 200.0)
         
         # Price history for each market
         self.price_history: Dict[str, deque] = {}
@@ -74,7 +74,7 @@ class SpikeStrategy(BaseStrategy):
         
         for market in markets:
             # Skip if market not tradeable
-            if not market.is_open or not market.is_liquid(self.min_liquidity_requirement):
+            if not market.is_open or not market.is_liquid(self.min_liquidity_usd):
                 continue
             
             # Skip if in cooldown
