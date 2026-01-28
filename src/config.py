@@ -3,9 +3,9 @@
 import os
 from typing import Literal
 from dataclasses import dataclass
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 @dataclass
 class Config:
@@ -79,7 +79,7 @@ class Config:
     PRICE_HISTORY_SIZE: int = int(os.getenv("PRICE_HISTORY_SIZE", "100"))
     COOLDOWN_PERIOD: int = int(os.getenv("COOLDOWN_PERIOD", "10"))
     MAX_CONCURRENT_TRADES: int = int(os.getenv("MAX_CONCURRENT_TRADES", "3"))
-    MIN_LIQUIDITY_REQUIREMENT: float = float(
+    MIN_LIQUIDITY_USD: float = float(
         os.getenv("MIN_LIQUIDITY_REQUIREMENT", "200.0")
     )
 
@@ -98,6 +98,7 @@ class Config:
     TRAILING_STOP_DISTANCE_USD: float = float(os.getenv("TRAILING_STOP_DISTANCE_USD", "2.50"))
     
     # ===== Risk Management =====
+    MAX_SPREAD_PCT: float = float(os.getenv("MAX_SPREAD_PCT", "0.30"))
     MAX_DAILY_LOSS_PCT: float = float(os.getenv("MAX_DAILY_LOSS_PCT", "0.15"))
     MAX_SLIPPAGE_TOLERANCE: float = float(
         os.getenv("MAX_SLIPPAGE_TOLERANCE", "0.025")
@@ -141,6 +142,9 @@ class Config:
         os.getenv("MIN_ACCOUNT_BALANCE", "100.0")  # Minimum $100
     )
 
+    # ===== Market Filtering =====
+    TARGET_EVENT_KEYWORDS: str = os.getenv("TARGET_EVENT_KEYWORDS", "NBA,NFL,NCAAB")
+
     # ===== Paper Trading Configuration =====
     PAPER_TRADING = bool(os.getenv("PAPER_TRADING", False))
     PAPER_STARTING_BALANCE = float(os.getenv("PAPER_STARTING_BALANCE", "1000.0"))
@@ -151,6 +155,9 @@ class Config:
     
     def __post_init__(self):
         """Validate configuration after initialization"""
+        if isinstance(self.TARGET_EVENT_KEYWORDS, str):
+            self.TARGET_EVENT_KEYWORDS = [kw.strip() for kw in self.TARGET_EVENT_KEYWORDS.split(',') if kw.strip()]
+        
         if self.platform == "polymarket":
             if not self.PK:
                 raise ValueError("PK (private key) required for Polymarket")

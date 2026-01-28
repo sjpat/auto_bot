@@ -48,7 +48,7 @@ class StrategyManager:
                     'TARGET_LOSS_USD': config.TARGET_LOSS_USD,
                     'HOLDING_TIME_LIMIT': config.HOLDING_TIME_LIMIT,
                     'COOLDOWN_PERIOD': config.COOLDOWN_PERIOD,
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
                 }
                 self.spike_strategy = SpikeStrategy(spike_config)
                 self.strategies.append(('spike', self.spike_strategy))
@@ -66,7 +66,7 @@ class StrategyManager:
                     'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MISPRICING', 0.60),
                     'MAX_HOLDING_TIME': getattr(config, 'MISPRICING_MAX_HOLDING_TIME', 14400),
                     'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50),
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT,
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD,
                     'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
                     'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5)
                 }
@@ -88,7 +88,7 @@ class StrategyManager:
                     'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
                     'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5),
                     'HOLDING_TIME_LIMIT': getattr(config, 'HOLDING_TIME_LIMIT', 1800),
-                    'MIN_LIQUIDITY_REQUIREMENT': config.MIN_LIQUIDITY_REQUIREMENT
+                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
                 }
                 self.momentum_strategy = MomentumStrategy(momentum_config)
                 self.strategies.append(('momentum', self.momentum_strategy))

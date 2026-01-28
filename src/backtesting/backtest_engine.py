@@ -219,13 +219,14 @@ class BacktestMarketAdapter:
         return self.price_point.volume_24h or 0.0
     
     @property
-    def spread_bps(self) -> float:
-        """Calculate spread in basis points"""
-        if self.bid is None or self.ask is None:
+    def spread_pct(self) -> float:
+        """Calculate spread as a percentage of the mid-price."""
+        if self.bid is None or self.ask is None or self.bid == 0 or self.ask == 0:
             return 0.0
-        mid = (self.bid + self.ask) / 2
-        if mid > 0:
-            return ((self.ask - self.bid) / mid) * 10000
+        
+        mid_price = (self.bid + self.ask) / 2
+        if mid_price > 0:
+            return (self.ask - self.bid) / mid_price
         return 0.0
     
     @property
@@ -428,13 +429,12 @@ class BacktestEngine:
             return False
         
         # Check spread
-        if price_point.bid and price_point.ask:
-            spread = (price_point.ask - price_point.bid) / price_point.bid
-            if spread > self.config.MAX_SPREAD_PCT:
-                results.rejection_reasons["spread_too_wide"] = (
-                    results.rejection_reasons.get("spread_too_wide", 0) + 1
-                )
-                return False
+        market_adapter = BacktestMarketAdapter(market_id, price_point)
+        if market_adapter.spread_pct > self.config.MAX_SPREAD_PCT:
+            results.rejection_reasons["spread_too_wide"] = (
+                results.rejection_reasons.get("spread_too_wide", 0) + 1
+            )
+            return False
         
         # Check suspicious spike size (reject outliers)
         # This prevents trading on extreme wicks

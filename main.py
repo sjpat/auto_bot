@@ -190,44 +190,25 @@ class TradingBot:
                 self.db.save_markets(all_markets)
                 self.logger.debug(f"Updated price history for {len(all_markets)} markets")
 
-                # 3. Apply comprehensive filtering
-                tradeable_markets = self.market_filter.filter_tradeable_markets(all_markets)
-
-                if not tradeable_markets:
-                    self.logger.debug("No tradeable markets after filtering")
-                    await asyncio.sleep(self.config.PRICE_UPDATE_INTERVAL)
-                    continue
-
-                # 4. Rank by opportunity
-                # In the future, the spike_detector could be made a property of the strategy_manager
-                spike_detector = getattr(self.strategy_manager, 'spike_strategy', None)
-                if spike_detector:
-                    ranked_markets = self.market_filter.rank_markets_by_opportunity(
-                        tradeable_markets,
-                        spike_detector
-                    )
-                else:
-                    ranked_markets = tradeable_markets
-
-                # 5. Generate signals from top markets
-                top_markets = ranked_markets[:20]
-                signals = self.strategy_manager.generate_entry_signals(top_markets)
+                # 3. Generate signals from all markets
+                signals = self.strategy_manager.generate_entry_signals(all_markets)
 
                 if signals:
                     self.logger.info(f"🔔 Detected {len(signals)} opportunity(ies)!")
 
                     for signal in signals:
-                        market = next((m for m in top_markets if m.market_id == signal.market_id), None)
+                        # Find the corresponding market object for the signal
+                        market = next((m for m in all_markets if m.market_id == signal.market_id), None)
                         if not market:
+                            self.logger.warning(f"Market object not found for signal on {signal.market_id}")
                             continue
 
-                        # 6. Risk check and execution
+                        # 4. Risk check and execution
                         if await self.should_trade_signal(market, signal):
                             await self.execute_signal_trade(signal, market)
                 else:
                     self.logger.debug(
-                        f"No signals generated from {len(top_markets)} top markets "
-                        f"({len(tradeable_markets)} tradeable, {len(all_markets)} total)"
+                        f"No signals generated from {len(all_markets)} total markets"
                     )
 
                 # Reset error counter on successful iteration
@@ -281,14 +262,14 @@ class TradingBot:
         
         # Check spread
         if market.best_ask_cents > 0 and market.best_bid_cents > 0:
-            spread_pct = (
-                (market.best_ask_cents - market.best_bid_cents) / market.last_price_cents
-            )
-            if spread_pct > self.config.MAX_SPREAD_PCT:
-                self.logger.debug(
-                    f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
-                )
-                return False
+            mid_price_cents = (market.best_ask_cents + market.best_bid_cents) / 2
+            if mid_price_cents > 0:
+                spread_pct = (market.best_ask_cents - market.best_bid_cents) / mid_price_cents
+                if spread_pct > self.config.MAX_SPREAD_PCT:
+                    self.logger.debug(
+                        f"❌ Wide spread for {signal.market_id}: {spread_pct:.1%}"
+                    )
+                    return False
         
         # 3. Correlation check
         # Estimate cost: price * trade_unit

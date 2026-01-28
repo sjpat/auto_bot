@@ -40,7 +40,7 @@ class MomentumStrategy(BaseStrategy):
         self.target_profit_usd = config.get('TARGET_PROFIT_USD', 3.0)
         self.target_loss_usd = config.get('TARGET_LOSS_USD', -1.5)
         self.holding_time_limit = config.get('HOLDING_TIME_LIMIT', 1800)  # 30 mins max for momentum
-        self.min_liquidity = config.get('MIN_LIQUIDITY_REQUIREMENT', 500.0)
+        self.min_liquidity_usd = config.get('MIN_LIQUIDITY_USD', 500.0)
         
         # State
         self.price_history: Dict[str, deque] = {}
@@ -54,7 +54,7 @@ class MomentumStrategy(BaseStrategy):
         signals = []
         
         for market in markets:
-            if not market.is_open or not market.is_liquid(self.min_liquidity):
+            if not market.is_open or not market.is_liquid(self.min_liquidity_usd):
                 continue
                 
             # Need history to calculate momentum
