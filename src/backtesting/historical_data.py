@@ -13,12 +13,13 @@ import logging
 class HistoricalPricePoint:
     """Single historical price point"""
     timestamp: datetime
-    price: float
-    yes_bid: float
-    yes_ask: float
-    volume: int
-    liquidity: float
-    market_id: str
+    yes_price: float
+    no_price: float
+    liquidity_usd: float
+    market_id: Optional[str] = None
+    bid: Optional[float] = None
+    ask: Optional[float] = None
+    volume_24h: Optional[float] = None
     expiry_timestamp: Optional[datetime] = None
     
     def to_dict(self):
@@ -30,6 +31,15 @@ class HistoricalPricePoint:
     
     @classmethod
     def from_dict(cls, data: dict):
+        # Handle legacy keys for cache compatibility
+        if 'price' in data: data['yes_price'] = data.pop('price')
+        if 'yes_bid' in data: data['bid'] = data.pop('yes_bid')
+        if 'yes_ask' in data: data['ask'] = data.pop('yes_ask')
+        if 'volume' in data: data['volume_24h'] = data.pop('volume')
+        if 'liquidity' in data: data['liquidity_usd'] = data.pop('liquidity')
+        if 'yes_price' in data and 'no_price' not in data:
+            data['no_price'] = 1.0 - data['yes_price']
+            
         data['timestamp'] = datetime.fromisoformat(data['timestamp'])
         if data.get('expiry_timestamp'):
             data['expiry_timestamp'] = datetime.fromisoformat(data['expiry_timestamp'])
@@ -100,13 +110,15 @@ class HistoricalDataFetcher:
             # Convert to HistoricalPricePoint objects
             price_points = []
             for point in history_data:
+                yes_price = point.get('last_price', 0) / 100.0
                 price_points.append(HistoricalPricePoint(
                     timestamp=datetime.fromtimestamp(point['ts']),
-                    price=point.get('last_price', 0) / 100.0,  # Convert cents to dollars
-                    yes_bid=point.get('yes_bid', 0) / 100.0,
-                    yes_ask=point.get('yes_ask', 0) / 100.0,
-                    volume=point.get('volume', 0),
-                    liquidity=point.get('liquidity', 0) / 100.0,
+                    yes_price=yes_price,
+                    no_price=1.0 - yes_price,
+                    bid=point.get('yes_bid', 0) / 100.0,
+                    ask=point.get('yes_ask', 0) / 100.0,
+                    volume_24h=float(point.get('volume', 0)),
+                    liquidity_usd=point.get('liquidity', 0) / 100.0,
                     market_id=market_id,
                     expiry_timestamp=market_expiry
                 ))
@@ -120,6 +132,34 @@ class HistoricalDataFetcher:
         except Exception as e:
             self.logger.error(f"Failed to fetch history for {market_id}: {e}")
             return []
+
+    def from_database(self, db_history: Dict[str, List]) -> Dict[str, List[HistoricalPricePoint]]:
+        """
+        Convert history loaded from DatabaseManager into Backtest-compatible format.
+        
+        Args:
+            db_history: Dictionary from DatabaseManager.get_recent_history()
+        """
+        backtest_data = {}
+        for market_id, points in db_history.items():
+            backtest_points = []
+            for price, timestamp in points:
+                # Map SQLite columns to HistoricalPricePoint
+                # Note: SQLite stores yes_price/no_price/liquidity which we can map here
+                backtest_points.append(HistoricalPricePoint(
+                    timestamp=timestamp,
+                        yes_price=price,
+                        no_price=1.0 - price,
+                        bid=price * 0.99,
+                        ask=price * 1.01,
+                        volume_24h=100.0,
+                        liquidity_usd=1000.0,
+                    market_id=market_id
+                ))
+            backtest_data[market_id] = backtest_points
+            
+        self.logger.info(f"Converted {len(backtest_data)} markets from DB to backtest format")
+        return backtest_data
     
     async def fetch_settled_markets(
         self,

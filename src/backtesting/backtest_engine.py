@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
+from src.backtesting.historical_data import HistoricalPricePoint
 from src.trading.correlation_manager import CorrelationManager
 
 logger = logging.getLogger(__name__)
@@ -162,18 +163,6 @@ class Trade:
         if self.entry_cost > 0:
             self.pnl_pct = (self.pnl / self.entry_cost) * 100
 
-
-@dataclass
-class HistoricalPricePoint:
-    """Historical price data point"""
-    timestamp: datetime
-    yes_price: float  # Price for YES outcome
-    no_price: float   # Price for NO outcome (should be ~1 - yes_price)
-    liquidity_usd: float
-    volume_24h: Optional[float] = None
-    bid: Optional[float] = None
-    ask: Optional[float] = None
-    expiry_timestamp: Optional[datetime] = None
 
 
 @dataclass

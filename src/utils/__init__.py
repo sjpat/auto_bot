@@ -3,6 +3,7 @@ Utility functions and helpers.
 """
 
 from src.utils.decorators import retry, async_retry, rate_limit, timing
+from src.utils.db_manager import DatabaseManager
 from src.utils.validators import (
     validate_price,
     validate_quantity,
@@ -20,6 +21,9 @@ from src.utils.formatters import (
 )
 
 __all__ = [
+    # Database
+    'DatabaseManager',
+
     # Decorators
     'retry',
     'async_retry',

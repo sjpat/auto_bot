@@ -8,5 +8,8 @@ dependencies = [
     "kalshi-python-async>=3.2.0",
     "pandas>=2.3.3",
     "plotly>=6.5.2",
+    "polars[rtcompat]>=1.37.1",
+    "python-dotenv>=1.2.1",
     "streamlit>=1.53.0",
+    "tqdm>=4.67.1",
 ]

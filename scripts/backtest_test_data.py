@@ -26,6 +26,8 @@ from src.backtesting.backtest_engine import (
     BacktestConfig,
     HistoricalPricePoint,
 )
+from src.backtesting.historical_data import HistoricalDataFetcher
+from src.utils.db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -35,58 +37,67 @@ async def main():
     print("BACKTESTING WITH PARITY-ALIGNED ENGINE")
     print("=" * 80)
     
-    # Load test data
-    test_file = Path("data/test_volatile_events.json")
-    if not test_file.exists():
-        print(f"❌ Test data not found. Generate it first:")
-        print(f"   python scripts/generate_test_data.py")
-        return
+    live_config = Config(platform="kalshi")
     
-    with open(test_file, 'r') as f:
-        raw_data = json.load(f)
-    
-    print(f"\n📊 Loaded {len(raw_data)} test markets")
-    
-    # Convert to HistoricalPricePoint format
-    # ✅ Now uses YES/NO prices matching Kalshi format
-    historical_data = {}
-    
-    # NEW: Warmup and Inefficiency settings
-    WARMUP_POINTS = 30
-    INEFFICIENCY_EDGE = 0.10  # 10% edge to trigger MispricingStrategy (min 8%)
-
-    for market_id, points in raw_data.items():
-        # Generate warmup data (flat price before start)
-        first_point = points[0]
-        start_ts = datetime.fromisoformat(first_point['timestamp'])
-        start_price = first_point['price']
+    # OPTIONAL: Load from SQLite instead of JSON for "Live Replay"
+    USE_DB_DATA = True 
+    if USE_DB_DATA:
+        db = DatabaseManager(live_config)
+        fetcher = HistoricalDataFetcher(None)
+        raw_db_data = db.get_recent_history(hours=72)
+        historical_data = fetcher.from_database(raw_db_data)
+        print(f"📊 Loaded {len(historical_data)} markets from SQLite")
+    else:
+        # Load test data
+        test_file = Path("data/test_volatile_events.json")
+        if not test_file.exists():
+            print(f"❌ Test data not found. Generate it first:")
+            print(f"   python scripts/generate_test_data.py")
+            return
         
-        full_points = []
-        for i in range(WARMUP_POINTS):
-            ts = start_ts - timedelta(minutes=WARMUP_POINTS - i)
-            full_points.append({
-                'timestamp': ts.isoformat(),
-                'price': start_price,
-                'volume': 10000,
-                'liquidity': 1000.0
-            })
-        full_points.extend(points)
+        with open(test_file, 'r') as f:
+            raw_data = json.load(f)
+        
+        print(f"\n📊 Loaded {len(raw_data)} test markets")
+        
+        # Convert to HistoricalPricePoint format
+        historical_data = {}
+        
+        # NEW: Warmup and Inefficiency settings
+        WARMUP_POINTS = 30
+        INEFFICIENCY_EDGE = 0.10  # 10% edge to trigger MispricingStrategy (min 8%)
 
-        historical_data[market_id] = [
-            HistoricalPricePoint(
-                timestamp=datetime.fromisoformat(p['timestamp']),
-                yes_price=p['price'],  # YES price
-                # Simulate inefficiency: NO price = 1 - YES - EDGE
-                # This creates an arbitrage opportunity (Sum < 1.0)
-                no_price=max(0.01, 1.0 - p['price'] - INEFFICIENCY_EDGE),
-                liquidity_usd=p.get('liquidity', 1000.0),
-                bid=p['price'] * 0.99,
-                ask=p['price'] * 1.01,
-                volume_24h=p.get('volume', 10000),
-                expiry_timestamp=datetime.fromisoformat(p['timestamp']) + timedelta(days=7),
-            )
-            for p in full_points
-        ]
+        for market_id, points in raw_data.items():
+            # Generate warmup data (flat price before start)
+            first_point = points[0]
+            start_ts = datetime.fromisoformat(first_point['timestamp'])
+            start_price = first_point['price']
+            
+            full_points = []
+            for i in range(WARMUP_POINTS):
+                ts = start_ts - timedelta(minutes=WARMUP_POINTS - i)
+                full_points.append({
+                    'timestamp': ts.isoformat(),
+                    'price': start_price,
+                    'volume': 10000,
+                    'liquidity': 1000.0
+                })
+            full_points.extend(points)
+
+            historical_data[market_id] = [
+                HistoricalPricePoint(
+                    timestamp=datetime.fromisoformat(p['timestamp']),
+                    yes_price=p['price'],
+                    no_price=1.0 - p['price'],
+                    bid=p['price'] * 0.99,
+                    ask=p['price'] * 1.01,
+                    volume_24h=float(p.get('volume', 10000)),
+                    liquidity_usd=p.get('liquidity', 1000.0),
+                    market_id=market_id,
+                    expiry_timestamp=datetime.fromisoformat(p['timestamp']) + timedelta(days=7),
+                )
+                for p in full_points
+            ]
     
     # Get date range
     all_timestamps = []

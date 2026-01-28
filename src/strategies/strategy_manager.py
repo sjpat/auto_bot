@@ -11,6 +11,7 @@ from src.strategies.base_strategy import Signal
 from src.models.market import Market
 from src.models.position import Position
 from src.strategies.volume_strategy import VolumeStrategy
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -198,7 +199,33 @@ class StrategyManager:
                 self.logger.error(f"❌ Error getting exits from {strategy_name}: {e}")
         
         return all_exit_signals
-    
+
+    def load_historical_data(self, history: Dict[str, List]):
+        """
+        Ingest historical price data into all strategies to 'warm them up'.
+        """
+        total_points = sum(len(pts) for pts in history.values())
+        self.logger.info(f"Warming up strategies with {total_points} points across {len(history)} markets...")
+        
+        # Use tqdm on the market grouping for clear visual progress
+        for market_id, points in tqdm(history.items(), desc="Warming up strategies", unit="market"):
+            for price, timestamp in points:
+                try:
+                    # Create a minimal mock market object for backfill
+                    mock_market = Market(
+                        market_id=market_id,
+                        title="",
+                        status="open",
+                        close_ts=int(timestamp.timestamp()),
+                        liquidity_cents=100000, 
+                        last_price_cents=int(price * 10000),
+                        best_bid_cents=int(price * 9990),
+                        best_ask_cents=int(price * 10010)
+                    )
+                    self.on_market_update(mock_market)
+                except Exception:
+                    continue
+
     def on_market_update(self, market: Market):
         """
         Forward market updates to all strategies.
