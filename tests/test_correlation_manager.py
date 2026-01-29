@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock
 from src.trading.correlation_manager import CorrelationManager
 
+
 class TestCorrelationManager(unittest.TestCase):
     def setUp(self):
         self.config = Mock()
@@ -19,7 +20,7 @@ class TestCorrelationManager(unittest.TestCase):
     def test_check_exposure_pass(self):
         """Test that trade passes when no exposure exists."""
         self.position_manager.get_active_positions.return_value = []
-        
+
         passed, reason = self.manager.check_exposure("FED-RATE", 100.0)
         self.assertTrue(passed)
         self.assertEqual(reason, "OK")
@@ -30,9 +31,9 @@ class TestCorrelationManager(unittest.TestCase):
         pos1 = Mock()
         pos1.market_id = "FED-DEC"
         pos1.entry_cost = 150.0
-        
+
         self.position_manager.get_active_positions.return_value = [pos1]
-        
+
         # Try to add $60 to FED group (Total $210 > $200 Limit)
         passed, reason = self.manager.check_exposure("FED-NOV", 60.0)
         self.assertFalse(passed)
@@ -44,12 +45,13 @@ class TestCorrelationManager(unittest.TestCase):
         pos1 = Mock()
         pos1.market_id = "NBA-GAME"
         pos1.entry_cost = 150.0
-        
+
         self.position_manager.get_active_positions.return_value = [pos1]
-        
+
         # Try to add $100 to FED (Should pass, different group)
         passed, reason = self.manager.check_exposure("FED-RATE", 100.0)
         self.assertTrue(passed)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

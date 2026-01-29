@@ -5,15 +5,17 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 class NotificationManager:
     """
     Manages sending notifications to external services (Telegram, etc.)
     """
+
     def __init__(self, config):
         self.token = config.TELEGRAM_BOT_TOKEN
         self.chat_id = config.TELEGRAM_CHAT_ID
         self.enabled = bool(self.token and self.chat_id)
-        
+
         if self.enabled:
             self.base_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             logger.info("✅ Telegram notifications enabled")
@@ -25,21 +27,21 @@ class NotificationManager:
         if not self.enabled:
             return
 
-        payload = {
-            "chat_id": self.chat_id,
-            "text": message,
-            "parse_mode": "Markdown"
-        }
+        payload = {"chat_id": self.chat_id, "text": message, "parse_mode": "Markdown"}
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(self.base_url, json=payload) as response:
                     if response.status != 200:
-                        logger.error(f"Failed to send Telegram message: {await response.text()}")
+                        logger.error(
+                            f"Failed to send Telegram message: {await response.text()}"
+                        )
         except Exception as e:
             logger.error(f"Error sending Telegram notification: {e}")
 
-    async def send_trade_alert(self, market_id: str, side: str, price: float, quantity: int, strategy: str):
+    async def send_trade_alert(
+        self, market_id: str, side: str, price: float, quantity: int, strategy: str
+    ):
         """Format and send a trade entry alert."""
         icon = "🟢" if side.lower() == "buy" else "🔴"
         msg = (
@@ -52,7 +54,9 @@ class NotificationManager:
         )
         await self.send_message(msg)
 
-    async def send_exit_alert(self, market_id: str, pnl: float, reason: str, return_pct: float):
+    async def send_exit_alert(
+        self, market_id: str, pnl: float, reason: str, return_pct: float
+    ):
         """Format and send a trade exit alert."""
         icon = "💰" if pnl > 0 else "🔻"
         msg = (

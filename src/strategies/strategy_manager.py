@@ -13,85 +13,88 @@ from src.models.position import Position
 from src.strategies.volume_strategy import VolumeStrategy
 from tqdm import tqdm
 
-
 logger = logging.getLogger(__name__)
 
 
 class StrategyManager:
     """
     Manages and coordinates multiple trading strategies.
-    
+
     Benefits:
     - Run spike detection AND mispricing detection simultaneously
     - Rank opportunities across all strategies
     - Unified signal generation
     - Strategy-specific exit logic
     """
-    
+
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
         self.config = config
         self.strategies = []
-        
+
         # Track which strategy opened each position
         self.position_strategies: Dict[str, str] = {}  # position_id -> strategy_name
         self.volume_strategy = VolumeStrategy(config)
 
         # Initialize Spike Strategy
-        if getattr(config, 'ENABLE_SPIKE_STRATEGY', True):
+        if getattr(config, "ENABLE_SPIKE_STRATEGY", True):
             try:
                 spike_config = {
-                    'SPIKE_THRESHOLD': config.SPIKE_THRESHOLD,
-                    'HISTORY_SIZE': config.PRICE_HISTORY_SIZE,
-                    'MIN_HISTORY': 20,
-                    'TARGET_PROFIT_USD': config.TARGET_PROFIT_USD,
-                    'TARGET_LOSS_USD': config.TARGET_LOSS_USD,
-                    'HOLDING_TIME_LIMIT': config.HOLDING_TIME_LIMIT,
-                    'COOLDOWN_PERIOD': config.COOLDOWN_PERIOD,
-                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
+                    "SPIKE_THRESHOLD": config.SPIKE_THRESHOLD,
+                    "HISTORY_SIZE": config.PRICE_HISTORY_SIZE,
+                    "MIN_HISTORY": 20,
+                    "TARGET_PROFIT_USD": config.TARGET_PROFIT_USD,
+                    "TARGET_LOSS_USD": config.TARGET_LOSS_USD,
+                    "HOLDING_TIME_LIMIT": config.HOLDING_TIME_LIMIT,
+                    "COOLDOWN_PERIOD": config.COOLDOWN_PERIOD,
+                    "MIN_LIQUIDITY_USD": config.MIN_LIQUIDITY_USD,
                 }
                 self.spike_strategy = SpikeStrategy(spike_config)
-                self.strategies.append(('spike', self.spike_strategy))
+                self.strategies.append(("spike", self.spike_strategy))
                 self.logger.info("✅ Spike strategy enabled")
             except Exception as e:
                 self.logger.error(f"❌ Failed to load spike strategy: {e}")
         else:
             self.logger.info("⏭️  Spike strategy disabled")
-        
+
         # Initialize Mispricing Strategy
-        if getattr(config, 'ENABLE_MISPRICING_STRATEGY', True):
+        if getattr(config, "ENABLE_MISPRICING_STRATEGY", True):
             try:
                 mispricing_config = {
-                    'MIN_EDGE': getattr(config, 'MIN_EDGE', 0.08),
-                    'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MISPRICING', 0.60),
-                    'MAX_HOLDING_TIME': getattr(config, 'MISPRICING_MAX_HOLDING_TIME', 14400),
-                    'HISTORY_SIZE': getattr(config, 'MISPRICING_HISTORY_SIZE', 50),
-                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD,
-                    'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
-                    'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5)
+                    "MIN_EDGE": getattr(config, "MIN_EDGE", 0.08),
+                    "MIN_CONFIDENCE": getattr(
+                        config, "MIN_CONFIDENCE_MISPRICING", 0.60
+                    ),
+                    "MAX_HOLDING_TIME": getattr(
+                        config, "MISPRICING_MAX_HOLDING_TIME", 14400
+                    ),
+                    "HISTORY_SIZE": getattr(config, "MISPRICING_HISTORY_SIZE", 50),
+                    "MIN_LIQUIDITY_USD": config.MIN_LIQUIDITY_USD,
+                    "TARGET_PROFIT_USD": getattr(config, "TARGET_PROFIT_USD", 2.0),
+                    "TARGET_LOSS_USD": getattr(config, "TARGET_LOSS_USD", -1.5),
                 }
                 self.mispricing_strategy = MispricingStrategy(mispricing_config)
-                self.strategies.append(('mispricing', self.mispricing_strategy))
+                self.strategies.append(("mispricing", self.mispricing_strategy))
                 self.logger.info("✅ Mispricing strategy enabled")
             except Exception as e:
                 self.logger.error(f"❌ Failed to load mispricing strategy: {e}")
         else:
             self.logger.info("⏭️  Mispricing strategy disabled")
-        
+
         # Initialize Momentum Strategy
-        if getattr(config, 'ENABLE_MOMENTUM_STRATEGY', False):
+        if getattr(config, "ENABLE_MOMENTUM_STRATEGY", False):
             try:
                 momentum_config = {
-                    'MOMENTUM_WINDOW': getattr(config, 'MOMENTUM_WINDOW', 6),
-                    'MOMENTUM_THRESHOLD': getattr(config, 'MOMENTUM_THRESHOLD', 0.03),
-                    'MIN_CONFIDENCE': getattr(config, 'MIN_CONFIDENCE_MOMENTUM', 0.65),
-                    'TARGET_PROFIT_USD': getattr(config, 'TARGET_PROFIT_USD', 2.0),
-                    'TARGET_LOSS_USD': getattr(config, 'TARGET_LOSS_USD', -1.5),
-                    'HOLDING_TIME_LIMIT': getattr(config, 'HOLDING_TIME_LIMIT', 1800),
-                    'MIN_LIQUIDITY_USD': config.MIN_LIQUIDITY_USD
+                    "MOMENTUM_WINDOW": getattr(config, "MOMENTUM_WINDOW", 6),
+                    "MOMENTUM_THRESHOLD": getattr(config, "MOMENTUM_THRESHOLD", 0.03),
+                    "MIN_CONFIDENCE": getattr(config, "MIN_CONFIDENCE_MOMENTUM", 0.65),
+                    "TARGET_PROFIT_USD": getattr(config, "TARGET_PROFIT_USD", 2.0),
+                    "TARGET_LOSS_USD": getattr(config, "TARGET_LOSS_USD", -1.5),
+                    "HOLDING_TIME_LIMIT": getattr(config, "HOLDING_TIME_LIMIT", 1800),
+                    "MIN_LIQUIDITY_USD": config.MIN_LIQUIDITY_USD,
                 }
                 self.momentum_strategy = MomentumStrategy(momentum_config)
-                self.strategies.append(('momentum', self.momentum_strategy))
+                self.strategies.append(("momentum", self.momentum_strategy))
                 self.logger.info("✅ Momentum strategy enabled")
             except Exception as e:
                 self.logger.error(f"❌ Failed to load momentum strategy: {e}")
@@ -100,71 +103,72 @@ class StrategyManager:
 
         if not self.strategies:
             raise ValueError("No strategies enabled! Enable at least one strategy.")
-        
-        self.logger.info(f"🎯 Strategy Manager initialized with {len(self.strategies)} strategies")
-    
+
+        self.logger.info(
+            f"🎯 Strategy Manager initialized with {len(self.strategies)} strategies"
+        )
+
     def generate_entry_signals(self, markets: List[Market]) -> List[Signal]:
         """
         Generate trading signals from all enabled strategies.
-        
+
         Args:
             markets: List of available markets
-        
+
         Returns:
             Ranked list of best opportunities across all strategies
         """
         all_signals = []
         volume_signals = self.volume_strategy.generate_entry_signals(markets)
         all_signals.extend(volume_signals)
-        
+
         if volume_signals:
             self.logger.info(f"📊 VOLUME: {len(volume_signals)} signals generated")
 
         for strategy_name, strategy in self.strategies:
             try:
                 signals = strategy.generate_entry_signals(markets)
-                
+
                 # Tag each signal with its source strategy
                 for signal in signals:
-                    if 'strategy' not in signal.metadata:
-                        signal.metadata['strategy'] = strategy_name
-                
+                    if "strategy" not in signal.metadata:
+                        signal.metadata["strategy"] = strategy_name
+
                 all_signals.extend(signals)
-                
+
                 if signals:
                     self.logger.info(
                         f"📊 {strategy_name.upper()}: {len(signals)} signals generated"
                     )
-            
+
             except Exception as e:
                 self.logger.error(f"❌ Error in {strategy_name} strategy: {e}")
                 import traceback
+
                 traceback.print_exc()
-        
+
         # Rank and return top opportunities
         ranked_signals = self._rank_signals(all_signals)
-        
+
         if ranked_signals:
             self.logger.info(
                 f"🎯 Total: {len(all_signals)} signals | Returning top {min(len(ranked_signals), 10)}"
             )
-        
+
         return ranked_signals[:10]  # Top 10 opportunities
-    
+
     def generate_exit_signals(
-        self,
-        positions: List[Position],
-        markets: Dict[str, Market]
+        self, positions: List[Position], markets: Dict[str, Market]
     ) -> List[Signal]:
         """
         Generate exit signals for open positions.
-        
+
         Routes each position to the strategy that created it.
-        
+
         Args:
             positions: List of open positions
             markets: Current market data
-        
+
         Returns:
             Exit signals from appropriate strategies
         """
@@ -172,32 +176,34 @@ class StrategyManager:
         strategy_positions = {}
         for position in positions:
             # Determine which strategy owns this position
-            strategy_name = position.metadata.get('strategy', 'spike')  # Default to spike
-            
+            strategy_name = position.metadata.get(
+                "strategy", "spike"
+            )  # Default to spike
+
             if strategy_name not in strategy_positions:
                 strategy_positions[strategy_name] = []
             strategy_positions[strategy_name].append(position)
-        
+
         # Get exit signals from each strategy
         all_exit_signals = []
-        
+
         for strategy_name, strategy in self.strategies:
             if strategy_name not in strategy_positions:
                 continue
-            
+
             try:
                 positions_subset = strategy_positions[strategy_name]
                 signals = strategy.generate_exit_signals(positions_subset, markets)
                 all_exit_signals.extend(signals)
-                
+
                 if signals:
                     self.logger.info(
                         f"🚪 {strategy_name.upper()}: {len(signals)} exit signals"
                     )
-            
+
             except Exception as e:
                 self.logger.error(f"❌ Error getting exits from {strategy_name}: {e}")
-        
+
         return all_exit_signals
 
     def load_historical_data(self, history: Dict[str, List]):
@@ -205,10 +211,14 @@ class StrategyManager:
         Ingest historical price data into all strategies to 'warm them up'.
         """
         total_points = sum(len(pts) for pts in history.values())
-        self.logger.info(f"Warming up strategies with {total_points} points across {len(history)} markets...")
-        
+        self.logger.info(
+            f"Warming up strategies with {total_points} points across {len(history)} markets..."
+        )
+
         # Use tqdm on the market grouping for clear visual progress
-        for market_id, points in tqdm(history.items(), desc="Warming up strategies", unit="market"):
+        for market_id, points in tqdm(
+            history.items(), desc="Warming up strategies", unit="market"
+        ):
             for price, timestamp in points:
                 try:
                     # Create a minimal mock market object for backfill
@@ -217,10 +227,10 @@ class StrategyManager:
                         title="",
                         status="open",
                         close_ts=int(timestamp.timestamp()),
-                        liquidity_cents=100000, 
+                        liquidity_cents=100000,
                         last_price_cents=int(price * 10000),
                         best_bid_cents=int(price * 9990),
-                        best_ask_cents=int(price * 10010)
+                        best_ask_cents=int(price * 10010),
                     )
                     self.on_market_update(mock_market)
                 except Exception:
@@ -229,7 +239,7 @@ class StrategyManager:
     def on_market_update(self, market: Market):
         """
         Forward market updates to all strategies.
-        
+
         Both strategies need price history for their logic.
         """
         self.volume_strategy.on_market_update(market)
@@ -239,11 +249,11 @@ class StrategyManager:
                 strategy.on_market_update(market)
             except Exception as e:
                 self.logger.error(f"❌ Error updating {strategy_name}: {e}")
-    
+
     def _rank_signals(self, signals: List[Signal]) -> List[Signal]:
         """
         Rank signals by quality score.
-        
+
         Scoring:
         - Base: confidence score
         - Multiplier: edge size (if available)
@@ -252,86 +262,92 @@ class StrategyManager:
         """
         if not signals:
             return []
-        
+
         scored_signals = []
-        
+
         for signal in signals:
             # Start with confidence
             score = signal.confidence
-            
+
             # Boost for larger edges
-            if 'edge' in signal.metadata:
-                edge = signal.metadata['edge']
-                score *= (1.0 + edge * 2)  # 10% edge = 1.2x multiplier
-            
+            if "edge" in signal.metadata:
+                edge = signal.metadata["edge"]
+                score *= 1.0 + edge * 2  # 10% edge = 1.2x multiplier
+
             # Boost for high-confidence pricing methods
-            if 'pricing_method' in signal.metadata:
-                method = signal.metadata['pricing_method']
-                
-                if method in ['time_decay_yes', 'time_decay_no']:
+            if "pricing_method" in signal.metadata:
+                method = signal.metadata["pricing_method"]
+
+                if method in ["time_decay_yes", "time_decay_no"]:
                     score *= 1.3  # Time decay is very reliable
-                elif method == 'yes_no_complement':
+                elif method == "yes_no_complement":
                     score *= 1.2  # Arbitrage is reliable
-                elif method == 'mean_reversion':
+                elif method == "mean_reversion":
                     score *= 0.9  # Mean reversion is less reliable
-            
+
             # Strategy type bonus
-            strategy = signal.metadata.get('strategy', 'unknown')
-            if strategy == 'mispricing':
-                score *= 1.1  # Slight preference for mispricing (works in low volatility)
-            elif strategy == 'momentum':
-                score *= 1.05 # Momentum is good for active events
-            
+            strategy = signal.metadata.get("strategy", "unknown")
+            if strategy == "mispricing":
+                score *= (
+                    1.1  # Slight preference for mispricing (works in low volatility)
+                )
+            elif strategy == "momentum":
+                score *= 1.05  # Momentum is good for active events
+
             scored_signals.append((score, signal))
-        
+
         # Sort by score descending
         scored_signals.sort(key=lambda x: x[0], reverse=True)
-        
+
         # Log top opportunities
         for i, (score, signal) in enumerate(scored_signals[:5], 1):
             market_id = signal.market_id[:30]
-            strategy = signal.metadata.get('strategy', 'unknown')
+            strategy = signal.metadata.get("strategy", "unknown")
             self.logger.debug(
                 f"  #{i} {market_id}... | "
                 f"Strategy: {strategy} | "
                 f"Score: {score:.2f} | "
                 f"Confidence: {signal.confidence:.1%}"
             )
-        
+
         return [signal for score, signal in scored_signals]
-    
+
     def record_trade_start(self, market_id: str, strategy_name: str):
         """Record which strategy initiated a trade (for cooldowns)."""
         for name, strategy in self.strategies:
             if name == strategy_name:
-                if hasattr(strategy, 'record_trade_start'):
+                if hasattr(strategy, "record_trade_start"):
                     strategy.record_trade_start(market_id)
-    
+
     def get_all_price_histories(self) -> Dict[str, Dict[str, List[float]]]:
         """Get price histories from all strategies."""
         histories = {}
         for strategy_name, strategy in self.strategies:
-            if hasattr(strategy, 'price_history'):
+            if hasattr(strategy, "price_history"):
                 # convert deques to lists for serialization
-                histories[strategy_name] = {market_id: list(history) for market_id, history in strategy.price_history.items()}
+                histories[strategy_name] = {
+                    market_id: list(history)
+                    for market_id, history in strategy.price_history.items()
+                }
         return histories
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics from all strategies."""
         stats = {
-            'enabled_strategies': len(self.strategies) + (1 if self.volume_strategy.enabled else 0),
-            'strategies': {}
+            "enabled_strategies": len(self.strategies)
+            + (1 if self.volume_strategy.enabled else 0),
+            "strategies": {},
         }
-        
+
         # Add Volume Strategy stats
         if self.volume_strategy.enabled:
-            stats['strategies']['volume'] = self.volume_strategy.get_statistics()
-        
+            stats["strategies"]["volume"] = self.volume_strategy.get_statistics()
+
         for strategy_name, strategy in self.strategies:
             try:
-                stats['strategies'][strategy_name] = strategy.get_statistics()
+                stats["strategies"][strategy_name] = strategy.get_statistics()
             except Exception as e:
                 self.logger.error(f"Error getting stats from {strategy_name}: {e}")
-                stats['strategies'][strategy_name] = {'error': str(e)}
-        
+                stats["strategies"][strategy_name] = {"error": str(e)}
+
         return stats

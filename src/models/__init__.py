@@ -9,20 +9,17 @@ from src.models.candles import Candle, Timeframe
 
 __all__ = [
     # Order
-    'Order',
-    'OrderSide',
-    'OrderType',
-    'OrderStatus',
-    
+    "Order",
+    "OrderSide",
+    "OrderType",
+    "OrderStatus",
     # Position
-    'Position',
-    'PositionSide',
-    
+    "Position",
+    "PositionSide",
     # Market
-    'Market',
-    'MarketStatus',
-    
+    "Market",
+    "MarketStatus",
     # Candles
-    'Candle',
-    'Timeframe',
+    "Candle",
+    "Timeframe",
 ]

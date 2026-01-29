@@ -1,6 +1,7 @@
 """
 Pytest configuration and fixtures for auto_bot tests.
 """
+
 import pytest
 from datetime import datetime
 from src.config import Config
@@ -37,9 +38,9 @@ def sample_market():
         status="open",
         close_ts=int((datetime.now().timestamp() + 86400)),  # Closes in 24 hours
         liquidity_cents=100000,  # $1000
-        last_price_cents=6500,   # $0.65
-        best_bid_cents=6450,     # $0.6450
-        best_ask_cents=6550      # $0.6550
+        last_price_cents=6500,  # $0.65
+        best_bid_cents=6450,  # $0.6450
+        best_ask_cents=6550,  # $0.6550
     )
 
 
@@ -55,13 +56,13 @@ def sample_order():
         status="filled",
         filled_quantity=100,
         avg_fill_price_cents=6500,
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
 
 
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line(
-        "markers", 
-        "integration: marks tests as integration tests that make real API calls (deselect with '-m \"not integration\"')"
+        "markers",
+        "integration: marks tests as integration tests that make real API calls (deselect with '-m \"not integration\"')",
     )

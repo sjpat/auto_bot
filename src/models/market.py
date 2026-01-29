@@ -10,6 +10,7 @@ from typing import Optional
 
 class MarketStatus(str, Enum):
     """Market status enumeration."""
+
     OPEN = "open"
     CLOSED = "closed"
     HALTED = "halted"
@@ -21,7 +22,7 @@ class MarketStatus(str, Enum):
 class Market:
     """
     Represents a prediction market.
-    
+
     Attributes:
         market_id: Unique market identifier
         title: Market title/question
@@ -39,7 +40,7 @@ class Market:
         category: Market category
         last_updated: Last update timestamp
     """
-    
+
     market_id: str
     title: str
     status: MarketStatus
@@ -55,95 +56,97 @@ class Market:
     open_interest: float = 0.0
     category: Optional[str] = None
     last_updated: datetime = None
-    
+
     def __post_init__(self):
         """Initialize calculated fields."""
         if self.last_updated is None:
             self.last_updated = datetime.now()
-    
+
     @property
     def is_open(self) -> bool:
         """Check if market is open for trading."""
         return self.status == MarketStatus.OPEN
-    
+
     @property
     def is_closed(self) -> bool:
         """Check if market is closed."""
         return self.status in [MarketStatus.CLOSED, MarketStatus.SETTLED]
-    
+
     @property
     def time_to_close_seconds(self) -> float:
         """Get seconds until market closes."""
         return (self.close_time - datetime.now()).total_seconds()
-    
+
     @property
     def time_to_close_hours(self) -> float:
         """Get hours until market closes."""
         return self.time_to_close_seconds / 3600
-    
+
     @property
     def time_to_close_days(self) -> float:
         """Get days until market closes."""
         return self.time_to_close_seconds / 86400
-    
+
     def is_expiring_soon(self, hours: float = 24.0) -> bool:
         """Check if market is expiring within specified hours."""
         return 0 < self.time_to_close_hours < hours
-    
+
     @property
     def spread_yes(self) -> Optional[float]:
         """Get YES spread (ask - bid)."""
         if self.yes_ask is not None and self.yes_bid is not None:
             return self.yes_ask - self.yes_bid
         return None
-    
+
     @property
     def spread_no(self) -> Optional[float]:
         """Get NO spread (ask - bid)."""
         if self.no_ask is not None and self.no_bid is not None:
             return self.no_ask - self.no_bid
         return None
-    
+
     @property
     def mid_price_yes(self) -> Optional[float]:
         """Get YES mid price."""
         if self.yes_ask is not None and self.yes_bid is not None:
             return (self.yes_ask + self.yes_bid) / 2
         return self.yes_price
-    
+
     @property
     def mid_price_no(self) -> Optional[float]:
         """Get NO mid price."""
         if self.no_ask is not None and self.no_bid is not None:
             return (self.no_ask + self.no_bid) / 2
         return self.no_price
-    
+
     def is_liquid(self, min_liquidity: float) -> bool:
         """Check if market has sufficient liquidity."""
         return self.liquidity >= min_liquidity
-    
-    def is_tradeable(self, min_liquidity: float = 500.0, max_hours_to_close: float = 1.0) -> bool:
+
+    def is_tradeable(
+        self, min_liquidity: float = 500.0, max_hours_to_close: float = 1.0
+    ) -> bool:
         """
         Check if market is tradeable.
-        
+
         Args:
             min_liquidity: Minimum liquidity required
             max_hours_to_close: Maximum hours until close (avoid expiring markets)
-        
+
         Returns:
             True if market is open, liquid, and not expiring soon
         """
         return (
-            self.is_open and
-            self.is_liquid(min_liquidity) and
-            not self.is_expiring_soon(max_hours_to_close)
+            self.is_open
+            and self.is_liquid(min_liquidity)
+            and not self.is_expiring_soon(max_hours_to_close)
         )
-    
+
     def __str__(self) -> str:
         return (
             f"Market({self.market_id[:8]}... | {self.title[:30]}... | "
             f"{self.status.value} | YES: ${self.yes_price:.4f} NO: ${self.no_price:.4f})"
         )
-    
+
     def __repr__(self) -> str:
         return self.__str__()

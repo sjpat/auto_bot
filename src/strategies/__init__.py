@@ -8,10 +8,10 @@ from src.strategies.mispricing_strategy import MispricingStrategy
 from src.strategies.momentum_strategy import MomentumStrategy
 
 __all__ = [
-    'BaseStrategy',
-    'Signal',
-    'SignalType',
-    'SpikeStrategy',
-    'MispricingStrategy',
-    'MomentumStrategy',
+    "BaseStrategy",
+    "Signal",
+    "SignalType",
+    "SpikeStrategy",
+    "MispricingStrategy",
+    "MomentumStrategy",
 ]

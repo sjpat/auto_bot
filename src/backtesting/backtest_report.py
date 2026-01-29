@@ -1,6 +1,7 @@
 """
 Report generation for backtesting results
 """
+
 from datetime import datetime
 from typing import Optional
 import json
@@ -8,27 +9,28 @@ from pathlib import Path
 
 from .performance_metrics import BacktestResults
 
+
 class BacktestReport:
     """Generate human-readable reports from backtest results"""
-    
+
     def __init__(self, results: BacktestResults):
         self.results = results
-    
+
     def print_summary(self):
         """Print formatted summary to console"""
         r = self.results
-        
-        print("\n" + "="*80)
+
+        print("\n" + "=" * 80)
         print("BACKTEST RESULTS SUMMARY")
-        print("="*80)
-        
+        print("=" * 80)
+
         # Period
         print(f"\n📅 BACKTEST PERIOD")
         print(f"   Start: {r.start_date.strftime('%Y-%m-%d %H:%M')}")
         print(f"   End:   {r.end_date.strftime('%Y-%m-%d %H:%M')}")
         duration = r.end_date - r.start_date
         print(f"   Duration: {duration.days} days, {duration.seconds // 3600} hours")
-        
+
         # Account performance
         print(f"\n💰 ACCOUNT PERFORMANCE")
         print(f"   Starting Balance: ${r.starting_balance:,.2f}")
@@ -37,14 +39,14 @@ class BacktestReport:
         return_pct = (r.final_balance - r.starting_balance) / r.starting_balance * 100
         print(f"   Return:           {return_pct:+.2f}%")
         print(f"   Total Fees Paid:  ${r.total_fees_paid:,.2f}")
-        
+
         # Trading statistics
         print(f"\n📊 TRADING STATISTICS")
         print(f"   Total Trades:     {r.total_trades}")
         print(f"   Winning Trades:   {r.winning_trades} ({r.win_rate:.1%})")
         print(f"   Losing Trades:    {r.losing_trades}")
         print(f"   Profit Factor:    {r.profit_factor:.2f}")
-        
+
         # P&L breakdown
         print(f"\n💵 P&L BREAKDOWN")
         print(f"   Gross Profit:     ${r.gross_profit:,.2f}")
@@ -53,25 +55,27 @@ class BacktestReport:
         print(f"   Average Loss:     ${r.avg_loss:,.2f}")
         print(f"   Largest Win:      ${r.largest_win:,.2f}")
         print(f"   Largest Loss:     ${r.largest_loss:,.2f}")
-        
+
         # Risk metrics
         print(f"\n⚠️  RISK METRICS")
         print(f"   Max Drawdown:     ${r.max_drawdown:,.2f} ({r.max_drawdown_pct:.1%})")
         print(f"   Sharpe Ratio:     {r.sharpe_ratio:.2f}")
         print(f"   Max Consecutive Losses: {r.max_consecutive_losses}")
-        
+
         # Spike detection
         print(f"\n🚨 SPIKE DETECTION")
         print(f"   Spikes Detected:  {r.spikes_detected}")
         print(f"   Spikes Traded:    {r.spikes_traded}")
         print(f"   Spikes Rejected:  {r.spikes_rejected}")
         print(f"   Spike Threshold:  {r.spike_threshold:.1%}")
-        
+
         if r.rejection_reasons:
             print(f"\n   Rejection Reasons:")
-            for reason, count in sorted(r.rejection_reasons.items(), key=lambda x: x[1], reverse=True):
+            for reason, count in sorted(
+                r.rejection_reasons.items(), key=lambda x: x[1], reverse=True
+            ):
                 print(f"      {reason}: {count}")
-        
+
         # Hold time
         if r.avg_hold_time is not None:
             hours = r.avg_hold_time.total_seconds() / 3600
@@ -80,106 +84,113 @@ class BacktestReport:
         else:
             print(f"\n⏱️  TIMING")
             print(f"   Average Hold Time: N/A (no completed trades)")
-        
-        print("\n" + "="*80)
-    
+
+        print("\n" + "=" * 80)
+
     def print_trade_log(self, limit: int = 20):
         """Print detailed trade log"""
         print(f"\n📋 TRADE LOG (showing last {limit} trades)")
-        print("-"*100)
-        print(f"{'#':<4} {'Market':<20} {'Entry':<12} {'Exit':<12} {'P&L':<12} {'Return':<10} {'Reason':<15}")
-        print("-"*100)
-        
+        print("-" * 100)
+        print(
+            f"{'#':<4} {'Market':<20} {'Entry':<12} {'Exit':<12} {'P&L':<12} {'Return':<10} {'Reason':<15}"
+        )
+        print("-" * 100)
+
         trades_to_show = self.results.trades[-limit:]
-        
+
         for trade in trades_to_show:
-            market_short = trade.market_id[:18] + "..." if len(trade.market_id) > 20 else trade.market_id
-            entry_str = trade.entry_time.strftime('%m/%d %H:%M')
-            exit_str = trade.exit_time.strftime('%m/%d %H:%M') if trade.exit_time else "Open"
+            market_short = (
+                trade.market_id[:18] + "..."
+                if len(trade.market_id) > 20
+                else trade.market_id
+            )
+            entry_str = trade.entry_time.strftime("%m/%d %H:%M")
+            exit_str = (
+                trade.exit_time.strftime("%m/%d %H:%M") if trade.exit_time else "Open"
+            )
             pnl_str = f"${trade.net_pnl:+.2f}" if trade.net_pnl else "-"
             return_str = f"{trade.return_pct:+.1%}" if trade.return_pct else "-"
-            
-            print(f"{trade.trade_id:<4} {market_short:<20} {entry_str:<12} {exit_str:<12} "
-                  f"{pnl_str:<12} {return_str:<10} {trade.exit_reason or '-':<15}")
-        
-        print("-"*100)
-    
+
+            print(
+                f"{trade.trade_id:<4} {market_short:<20} {entry_str:<12} {exit_str:<12} "
+                f"{pnl_str:<12} {return_str:<10} {trade.exit_reason or '-':<15}"
+            )
+
+        print("-" * 100)
+
     def save_to_json(self, filename: str):
         """Save results to JSON file"""
         output_dir = Path("data/backtest_results")
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         filepath = output_dir / filename
-        
+
         # Convert results to dict
         data = {
-            'summary': {
-                'start_date': self.results.start_date.isoformat(),
-                'end_date': self.results.end_date.isoformat(),
-                'starting_balance': self.results.starting_balance,
-                'final_balance': self.results.final_balance,
-                'total_pnl': self.results.total_pnl,
-                'win_rate': self.results.win_rate,
-                'total_trades': self.results.total_trades,
-                'profit_factor': self.results.profit_factor,
-                'max_drawdown_pct': self.results.max_drawdown_pct,
-                'sharpe_ratio': self.results.sharpe_ratio,
+            "summary": {
+                "start_date": self.results.start_date.isoformat(),
+                "end_date": self.results.end_date.isoformat(),
+                "starting_balance": self.results.starting_balance,
+                "final_balance": self.results.final_balance,
+                "total_pnl": self.results.total_pnl,
+                "win_rate": self.results.win_rate,
+                "total_trades": self.results.total_trades,
+                "profit_factor": self.results.profit_factor,
+                "max_drawdown_pct": self.results.max_drawdown_pct,
+                "sharpe_ratio": self.results.sharpe_ratio,
             },
-            'trades': [
+            "trades": [
                 {
-                    'trade_id': t.trade_id,
-                    'market_id': t.market_id,
-                    'entry_time': t.entry_time.isoformat(),
-                    'exit_time': t.exit_time.isoformat() if t.exit_time else None,
-                    'entry_price': t.entry_price,
-                    'exit_price': t.exit_price,
-                    'contracts': t.contracts,
-                    'net_pnl': t.net_pnl,
-                    'return_pct': t.return_pct,
-                    'exit_reason': t.exit_reason,
+                    "trade_id": t.trade_id,
+                    "market_id": t.market_id,
+                    "entry_time": t.entry_time.isoformat(),
+                    "exit_time": t.exit_time.isoformat() if t.exit_time else None,
+                    "entry_price": t.entry_price,
+                    "exit_price": t.exit_price,
+                    "contracts": t.contracts,
+                    "net_pnl": t.net_pnl,
+                    "return_pct": t.return_pct,
+                    "exit_reason": t.exit_reason,
                 }
                 for t in self.results.trades
             ],
-            'equity_curve': [
-                {
-                    'timestamp': ts.isoformat(),
-                    'balance': balance
-                }
+            "equity_curve": [
+                {"timestamp": ts.isoformat(), "balance": balance}
                 for ts, balance in self.results.equity_curve
-            ]
+            ],
         }
-        
-        with open(filepath, 'w') as f:
+
+        with open(filepath, "w") as f:
             json.dump(data, f, indent=2)
-        
+
         print(f"\n✅ Results saved to: {filepath}")
-    
+
     def generate_html_report(self, filename: str = "backtest_report.html"):
         """Generate interactive HTML report with charts"""
         output_dir = Path("data/backtest_results")
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         filepath = output_dir / filename
-        
+
         html = self._generate_html()
-        
-        with open(filepath, 'w') as f:
+
+        with open(filepath, "w") as f:
             f.write(html)
-        
+
         print(f"\n✅ HTML report saved to: {filepath}")
-    
+
     def _generate_html(self) -> str:
         """Generate HTML content for report"""
         r = self.results
-        
+
         # Prepare equity curve data for chart
         equity_data = [
             f"['{ts.strftime('%Y-%m-%d %H:%M')}', {balance}]"
             for ts, balance in r.equity_curve
         ]
-        
+
         return_pct = (r.final_balance - r.starting_balance) / r.starting_balance * 100
-        
+
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -315,10 +326,12 @@ class BacktestReport:
             </thead>
             <tbody>
 """
-        
+
         # Add last 50 trades to table
         for trade in r.trades[-50:]:
-            pnl_class = 'positive' if trade.net_pnl and trade.net_pnl > 0 else 'negative'
+            pnl_class = (
+                "positive" if trade.net_pnl and trade.net_pnl > 0 else "negative"
+            )
             html += f"""
                 <tr>
                     <td>{trade.trade_id}</td>
@@ -330,7 +343,7 @@ class BacktestReport:
                     <td>{trade.exit_reason or '-'}</td>
                 </tr>
 """
-        
+
         html += f"""
             </tbody>
         </table>
