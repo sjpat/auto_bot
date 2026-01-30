@@ -17,8 +17,9 @@ def test_real_market_data_retrieval(config):
     Test that we can retrieve real market data from Kalshi API.
     This is NOT mocked - it makes a real API call.
     """
-    if (config.KALSHI_DEMO and not config.KALSHI_DEMO_API_KEY) or \
-       (not config.KALSHI_DEMO and not config.KALSHI_API_KEY):
+    if (config.KALSHI_DEMO and not config.KALSHI_DEMO_API_KEY) or (
+        not config.KALSHI_DEMO and not config.KALSHI_API_KEY
+    ):
         pytest.skip("Kalshi API credentials not configured for this environment.")
 
     async def _test():

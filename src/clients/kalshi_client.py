@@ -229,8 +229,8 @@ class KalshiClient:
 
                 # Authenticate using headers, as per documentation
                 ws_path = "/trade-api/ws/v2"
-                auth_headers = self.client.api_client.get_authentication_params_for_path(
-                    ws_path
+                auth_headers = (
+                    self.client.api_client.get_authentication_params_for_path(ws_path)
                 )
 
                 async with websockets.connect(
